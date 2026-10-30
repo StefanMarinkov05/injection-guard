@@ -307,3 +307,30 @@ class ReadingOrder(unittest.TestCase):
     def test_matching_tags_are_quiet(self):
         _, F = pdfscan(self.build([0, 1]))
         self.assertFalse(has_kind(F, "reading order"), F.items)
+
+
+class ScannerDoS(unittest.TestCase):
+    """Pathological inputs once made single regexes quadratic (100k letters: 247 s, 100k newlines: 70 s).
+    A document must not be able to stall the scanner."""
+    CASES = {"long word": "a" * 100000, "newlines": "\n" * 100000, "url-encoded run": "%41a" * 30000,
+             "letters+digits": "a1" * 50000, "base64-ish": "QUFB" * 50000, "hex": "41" * 100000,
+             "binary groups": "01000001 " * 20000, "spaces": "a " * 100000, "cyrillic+digit": "а0" * 50000,
+             "markdown comments": "<!-- x -->" * 20000, "brackets": "(" * 50000 + ")" * 50000}
+
+    def test_each_input_is_fast(self):
+        import time
+        for name, t in self.CASES.items():
+            with self.subTest(case=name):
+                s = time.time()
+                check_text(t, "t", Findings())
+                self.assertLess(time.time() - s, 8, name)
+
+    def test_markdown_and_html_paths(self):
+        import time
+        from guard.textdoc import scan_text
+        for name in ("long word", "newlines", "markdown comments"):
+            with self.subTest(case=name):
+                s = time.time()
+                scan_text(self.CASES[name], Findings(), "t.md")
+                sanitize_html("<p>" + self.CASES[name] + "</p>", Findings(), "t")
+                self.assertLess(time.time() - s, 15, name)

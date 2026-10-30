@@ -138,7 +138,7 @@ def lsb_payload(im, F, where):
         lsb = int(s[::-1], 2).to_bytes(len(s) // 8, "big")[::-1]
         for order, b in (("MSB-first", msb), ("LSB-first", lsb)):
             runs = [r.decode("latin1") for r in re.findall(rb"[\x20-\x7e\t\n]{24,}", b[:400_000])]
-            words = [r for r in runs if re.search(r"[A-Za-z]{3,} [A-Za-z]{2,} [A-Za-z]{3,}", r)]
+            words = [r for r in runs if re.search(r"\b[A-Za-z]{3,}+ [A-Za-z]{2,}+ [A-Za-z]{3,}+", r)]
             if words:
                 txt = " ".join(words)
                 sev = "HIGH" if (STRONG.search(txt) or KEYWORDS.search(txt)) else "MED"

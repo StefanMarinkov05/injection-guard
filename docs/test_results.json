@@ -1,8 +1,8 @@
 {
- "version": "1.5.0",
- "date": "2026-10-30 07:08",
- "seconds": 308,
- "total": 321,
+ "version": "1.5.1",
+ "date": "2026-10-30 08:27",
+ "seconds": 110,
+ "total": 323,
  "failures": 0,
  "errors": 0,
  "skipped": 0,
@@ -11,1927 +11,1939 @@
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.01
   },
   "test_advanced.Encodings.test_encoded_benign_text_is_not_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_advanced.Encodings.test_readable_encoded_text_is_at_least_med": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_advanced.ImageDeep.test_bad_crc": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.13
   },
   "test_advanced.ImageDeep.test_compressed_private_chunk": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.13
   },
   "test_advanced.ImageDeep.test_image_scaling_attack": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.32
   },
   "test_advanced.ImageDeep.test_jpeg_comment_and_app_segment": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.2
   },
   "test_advanced.ImageDeep.test_lsb_noise_is_clean": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.19
   },
   "test_advanced.ImageDeep.test_lsb_steganography": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.18
   },
   "test_advanced.ImageDeep.test_normal_logo_with_transparency_is_clean": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.13
   },
   "test_advanced.ImageDeep.test_normal_text_image_not_scaling_attack": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.94
   },
   "test_advanced.ImageDeep.test_text_in_fully_transparent_pixels": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.13
   },
   "test_advanced.ImageDeep.test_text_only_visible_on_dark_background": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.13
   },
   "test_advanced.ImageDeep.test_unknown_private_chunk": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.1
   },
   "test_advanced.ImageDeep.test_ztxt_and_itxt": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.21
   },
   "test_advanced.LiveContent.test_decode_and_write": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_advanced.LiveContent.test_decode_write_with_bot_detection_is_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_advanced.LiveContent.test_encoded_string_in_script": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_advanced.LiveContent.test_encrypted_payload_is_flagged_even_if_unreadable": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_advanced.LiveContent.test_pdf_javascript_eval_is_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.4
   },
   "test_advanced.LiveContent.test_pdf_javascript_live_date": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_advanced.LiveContent.test_plain_analytics_script_not_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_advanced.LiveContent.test_time_or_user_agent_dependent_content": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_advanced.Polyglots.test_clean_pdf_has_no_ambiguity_findings": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_advanced.Polyglots.test_duplicate_objects_without_update": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_advanced.Polyglots.test_earlier_revision_differs": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.22
   },
   "test_advanced.Polyglots.test_garbage_pdf_is_never_clean": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.17
   },
   "test_advanced.Polyglots.test_html_inside_image": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.12
   },
   "test_advanced.Polyglots.test_missing_eof": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.22
   },
   "test_advanced.Polyglots.test_pdf_with_zip_appended": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_advanced.Polyglots.test_png_then_pdf": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.19
   },
   "test_advanced.Polyglots.test_trailing_injection": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_advanced.UnicodeSmuggling.test_exfiltration_patterns": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_advanced.UnicodeSmuggling.test_other_invisible_fillers": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_advanced.UnicodeSmuggling.test_single_emoji_selector_is_fine": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_advanced.UnicodeSmuggling.test_variation_selector_smuggling": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_cli_hooks.Hooks.test_bash_non_readers_and_safe_tools_pass": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.37
   },
   "test_cli_hooks.Hooks.test_bash_readers_are_gated": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.45
   },
   "test_cli_hooks.Hooks.test_block_on_high_only_config": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.65
   },
   "test_cli_hooks.Hooks.test_clean_scan_unlocks_read": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.65
   },
   "test_cli_hooks.Hooks.test_file_swap_after_scan_is_gated_again": {
    "status": "pass",
    "doc": "Trust is bound to the exact bytes (SHA-256), not to name, size or time - a swap re-opens the gate.",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.68
   },
   "test_cli_hooks.Hooks.test_high_and_med_stay_blocked_in_strict": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.72
   },
   "test_cli_hooks.Hooks.test_html_in_git_is_source_outside_is_document": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.17
   },
   "test_cli_hooks.Hooks.test_malformed_input_fails_open_quietly": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.32
   },
   "test_cli_hooks.Hooks.test_missing_file_passes": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.08
   },
   "test_cli_hooks.Hooks.test_post_quiet_on_benign_output_and_safe_tools": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.18
   },
   "test_cli_hooks.Hooks.test_post_read_of_flagged_file": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.68
   },
   "test_cli_hooks.Hooks.test_post_reminder_for_web_sources": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_cli_hooks.Hooks.test_post_warns_on_injection_in_output": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.6
   },
   "test_cli_hooks.Hooks.test_reading_the_registry_is_allowed": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.07
   },
   "test_cli_hooks.Hooks.test_self_protection": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.6
   },
   "test_cli_hooks.Hooks.test_session_notice": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.17
   },
   "test_cli_hooks.Hooks.test_source_and_text_files_pass": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.38
   },
   "test_cli_hooks.Hooks.test_trusted_paths": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.07
   },
   "test_cli_hooks.Hooks.test_unscanned_document_is_denied": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.56
   },
   "test_cli_hooks.Hooks.test_warn_and_off_modes": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.8
   },
   "test_cli_hooks.Hooks.test_webfetch": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.17
   },
   "test_cli_hooks.SafeFetch.test_blocking_ai_agents_is_reported": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.17
   },
   "test_cli_hooks.SafeFetch.test_clean_page": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.17
   },
   "test_cli_hooks.SafeFetch.test_cloak_check_can_be_disabled": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.14
   },
   "test_cli_hooks.SafeFetch.test_cloaking_detected": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.17
   },
   "test_cli_hooks.SafeFetch.test_errors": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_cli_hooks.SafeFetch.test_hidden_html": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.15
   },
   "test_cli_hooks.SafeFetch.test_pdf_by_content_type": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 1.34
   },
   "test_cli_hooks.SafeFetch.test_registry_has_source_url": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.17
   },
   "test_cli_hooks.SafeReadCli.test_hidden_text_not_in_output": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.61
   },
   "test_cli_hooks.SafeReadCli.test_missing_file": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.1
   },
   "test_cli_hooks.SafeReadCli.test_multiple_files": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.83
   },
   "test_cli_hooks.SafeReadCli.test_nonce_changes_every_run": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 1.19
   },
   "test_cli_hooks.SafeReadCli.test_out_json_truncation_report_only": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 2.45
   },
   "test_cli_hooks.SafeReadCli.test_registry_written_with_sha256": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.59
   },
   "test_cli_hooks.SafeReadCli.test_report_markers_and_rules": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.63
   },
   "test_common.Homoglyphs.test_cyrillic_in_latin_word": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.Homoglyphs.test_greek_math_is_not_flagged": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.Homoglyphs.test_lookalike_greek": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.Homoglyphs.test_pure_cyrillic_word_ok": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.InvisibleUnicode.test_bidi": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.InvisibleUnicode.test_bom_and_word_joiner": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.InvisibleUnicode.test_decode_tags": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.InvisibleUnicode.test_plain_zero_width_med": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.InvisibleUnicode.test_short_tag_run_med": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.InvisibleUnicode.test_soft_hyphen_is_normal": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.InvisibleUnicode.test_strip_invisible": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.InvisibleUnicode.test_tag_smuggling_decoded": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.InvisibleUnicode.test_zero_width_splitting_a_phrase": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.Keywords.test_hidden_mention_is_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.Keywords.test_keywords_off": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.Keywords.test_visible_mention_is_info_only": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.Keywords.test_visible_mention_with_imperative_is_med": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.Obfuscation.test_base64_payload": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.Obfuscation.test_benign_base64_not_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.Obfuscation.test_spaced_keyword_in_hidden_text": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.Obfuscation.test_spaced_letters_phrase": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.Robustness.test_large_input_is_fast": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 7.07
   },
   "test_common.Robustness.test_weird_input": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_common.StrongPhrases.test_entity_and_case_variants": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.StrongPhrases.test_negative_phrases_not_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.StrongPhrases.test_one_finding_per_passage_but_separate_passages_count": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_common.StrongPhrases.test_positive_phrases_are_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_directives_ocr.Directives.test_docx_hidden_directive": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_directives_ocr.Directives.test_hidden_directives_are_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_directives_ocr.Directives.test_hidden_html_directive_without_ai_words": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_directives_ocr.Directives.test_hidden_html_sentence_is_med_menu_is_not": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_directives_ocr.Directives.test_markdown_canary_comment": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_directives_ocr.Directives.test_ordinary_task_text_has_no_directive": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_directives_ocr.Directives.test_pdf_white_directive_without_ai_words": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_directives_ocr.Directives.test_visible_directives_are_info_only": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_directives_ocr.LookAlikeIdentifiers.test_normal_identifiers": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_directives_ocr.LookAlikeIdentifiers.test_state_names_with_cyrillic_letters": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_directives_ocr.OcrChecks.test_clean_pdf_has_no_ocr_findings": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 2.87
   },
   "test_directives_ocr.OcrChecks.test_faint_text_found_by_ocr": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 3.59
   },
   "test_directives_ocr.OcrChecks.test_image_file_text_is_transcribed_and_checked": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.22
   },
   "test_directives_ocr.OcrChecks.test_single_number_swap": {
    "status": "pass",
    "doc": "corpus 14: the page says 'divisible by 3', the text layer says 7.",
    "detail": "",
-   "subtest": ""
+   "seconds": 2.94
   },
   "test_directives_ocr.OcrChecks.test_systematic_swap_via_tounicode": {
    "status": "pass",
    "doc": "corpus 21: drawn a/b extract as b/a everywhere - OCR shows the page says something else.",
    "detail": "",
-   "subtest": ""
+   "seconds": 3.21
   },
   "test_directives_ocr.OcrChecks.test_text_drawn_as_image_is_found": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 3.1
   },
   "test_directives_ocr.OcrChecks.test_typo_on_page_is_not_flagged_as_swap": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 2.59
   },
   "test_directives_ocr.ReaderDifferential.test_actualtext_only_some_readers_see": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.26
   },
   "test_directives_ocr.ReaderDifferential.test_clean_pdf_readers_agree": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.27
   },
   "test_latex.Archives.test_entries_are_scanned": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.Archives.test_finder_comment_with_instruction": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.Archives.test_macos_metadata": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.Archives.test_nested_zip": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.Archives.test_path_traversal_name": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.Archives.test_unknown_binary_is_med": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.Bibtex.test_hidden_bib_fields": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.Bibtex.test_normal_bib_is_clean": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.CompileTimeCode.test_catcode_in_document": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.CompileTimeCode.test_file_writes_and_packages_are_med": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.CompileTimeCode.test_shell_and_file_access": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.HiddenInSource.test_comment_directive_is_author_guidance": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.HiddenInSource.test_comment_split_over_lines": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.HiddenInSource.test_comment_with_ai_instruction": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.HiddenInSource.test_directive_in_pdf_metadata_is_med": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.HiddenInSource.test_embedded_file": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.HiddenInSource.test_escaped_percent_is_not_a_comment": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.HiddenInSource.test_glyph_to_unicode_remap": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.HiddenInSource.test_iffalse_and_comment_environment": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.HiddenInSource.test_kind_is_latex": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.HiddenInSource.test_lookalike_and_invisible_in_source": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.HiddenInSource.test_pdf_channels": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.01
   },
   "test_latex.HiddenInSource.test_phantom_tiny_zero_box_off_page": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.01
   },
   "test_latex.HiddenInSource.test_white_text": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.01
   },
   "test_latex.LatexHook.test_read_of_clean_tex_is_quiet": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.15
   },
   "test_latex.LatexHook.test_read_of_tex_with_hidden_instruction_warns": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.15
   },
   "test_latex.PackageCode.test_ai_text_in_package_code_still_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.PackageCode.test_macro_code_is_info_only": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_latex.PackageCode.test_real_template_files_are_clean": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 2.97
   },
   "test_office_images.Docx.test_broken_xml_fails_closed": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_clean": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_comments_part": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_core_metadata": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_custom_xml": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_doc_variable": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_field_code": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_header_footer_visible": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_image_alt_text": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_macros_flagged": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_microscopic_run": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_spec_vanish": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_textbox_inside_paragraph": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_tracked_deletion": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_vanish_run": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Docx.test_white_run": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Images.test_appended_payload": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.12
   },
   "test_office_images.Images.test_clean_png": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.12
   },
   "test_office_images.Images.test_corrupt_image": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.02
   },
   "test_office_images.Images.test_extension_lies": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.12
   },
   "test_office_images.Images.test_faint_text_in_image": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_office_images.Images.test_jpeg_exif_description": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.11
   },
   "test_office_images.Images.test_png_tag_chars_in_metadata": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.12
   },
   "test_office_images.Images.test_png_text_chunk": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.12
   },
   "test_office_images.OdfEpubZip.test_epub_hidden_span": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.OdfEpubZip.test_odt_annotation": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.OdfEpubZip.test_odt_hidden_text": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.OdfEpubZip.test_unknown_zip": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Pptx.test_clean_and_visible": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Pptx.test_hidden_shape_and_tiny_text": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Pptx.test_hidden_slide": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Pptx.test_shape_alt_text": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Pptx.test_speaker_notes": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Xlsx.test_hidden_rows": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Xlsx.test_hidden_sheets": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_office_images.Xlsx.test_instruction_in_cell": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_pdf.Corpus.test_corpus": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 6.74
   },
   "test_pdf.Corpus.test_every_fixture_has_an_expectation": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_pdf.RealSheets.test_sheet1_clean": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 1.23
   },
   "test_pdf.RealSheets.test_sheet2_trap": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 1.64
   },
   "test_pdf.Synthetic.test_actualtext_over_visible_glyphs": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_pdf.Synthetic.test_benign_mention_of_llms": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_pdf.Synthetic.test_clean": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_pdf.Synthetic.test_clipped_away": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_pdf.Synthetic.test_covered_by_white_box": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_pdf.Synthetic.test_garbage_pdf_does_not_crash": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_pdf.Synthetic.test_hidden_ocg_layer": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_pdf.Synthetic.test_images_option": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.33
   },
   "test_pdf.Synthetic.test_info_dictionary": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.95
   },
   "test_pdf.Synthetic.test_javascript": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_pdf.Synthetic.test_link_uri": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_pdf.Synthetic.test_multi_page_and_max_pages": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_pdf.Synthetic.test_near_white_text": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.5
   },
   "test_pdf.Synthetic.test_off_page_each_side": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 1.0
   },
   "test_pdf.Synthetic.test_pdf_with_wrong_extension": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_pdf.Synthetic.test_render_mode_3": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_pdf.Synthetic.test_render_mode_7_clip": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_pdf.Synthetic.test_sheet2_replica": {
    "status": "pass",
    "doc": "The exact construction found in Exercise Sheet 2 (24 Oct 2026).",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.28
   },
   "test_pdf.Synthetic.test_short_actualtext_ligature_is_not_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_pdf.Synthetic.test_single_hidden_word_still_reported": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_pdf.Synthetic.test_text_annotation": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_pdf.Synthetic.test_tiny_font": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_pdf.Synthetic.test_tounicode_letter_remap": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_pdf.Synthetic.test_tounicode_zero_width": {
    "status": "pass",
    "doc": "Real zero-width trap: a glyph whose extracted text is U+200B.",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_pdf.Synthetic.test_visible_injection_kept": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.26
   },
   "test_pdf.Synthetic.test_white_text": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_pdf.Synthetic.test_xmp_metadata": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_redteam.AlphabetTricks.test_cyrillic_a_inside_the_regex": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.AlphabetTricks.test_fullwidth_and_math_digits_in_task": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.AlphabetTricks.test_genuine_math_unicode_is_not_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.AlphabetTricks.test_greek_omicron_in_state_name_and_zero": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.Benign.test_normal_texts": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.InvisibleOnPage.test_black_text_on_black_box": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_redteam.InvisibleOnPage.test_colour_matched_to_grey_background": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_redteam.InvisibleOnPage.test_fingerprint_in_white_text_without_ai_words": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_redteam.InvisibleOnPage.test_outside_cropbox_inside_mediabox": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.16
   },
   "test_redteam.MetadataChannels.test_directive_in_annotation": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_redteam.MetadataChannels.test_directive_in_form_field_tooltip_and_value": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.71
   },
   "test_redteam.MetadataChannels.test_directive_in_info_fields": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 1.21
   },
   "test_redteam.MetadataChannels.test_directive_in_xmp": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_redteam.MetadataChannels.test_docx_core_title_directive": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.MetadataChannels.test_exif_of_jpeg_embedded_in_pdf": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_redteam.MetadataChannels.test_instruction_in_attachment_name": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.26
   },
   "test_redteam.MetadataChannels.test_png_metadata_directive": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.11
   },
   "test_redteam.SplitAcrossChannels.test_html_instruction_split_over_two_hiding_methods": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.SplitAcrossChannels.test_pdf_actualtext_per_glyph": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.27
   },
   "test_redteam.SplitAndObfuscate.test_chat_template_tokens": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.SplitAndObfuscate.test_combining_marks": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.SplitAndObfuscate.test_hyphenation_across_lines": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.SplitAndObfuscate.test_line_broken_phrase": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.SplitAndObfuscate.test_math_bold_letters": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.SplitAndObfuscate.test_other_languages": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.SplitAndObfuscate.test_reading_mode_probe": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.SplitAndObfuscate.test_soft_hyphens": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam.SplitAndObfuscate.test_synonyms": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam2.CoveredText.test_text_covered_by_an_image": {
    "status": "pass",
    "doc": "Text layer has a directive, an opaque picture of the real task is drawn over it: render diff sees ink,",
    "detail": "",
-   "subtest": ""
+   "seconds": 3.35
   },
   "test_redteam2.Encodings2.test_braille": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam2.Encodings2.test_dotted_and_dashed_letters": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam2.Encodings2.test_superscript_letters": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam2.Encodings2.test_unicode_spaces_between_words": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam2.OfficeCarriers2.test_docx_alternate_content_differs": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam2.OfficeCarriers2.test_pptx_text_off_slide": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam2.PdfCarriers2.test_bookmark_with_directive": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_redteam2.PdfCarriers2.test_directive_in_pdf_comment": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_redteam2.PdfCarriers2.test_encoded_string_in_pdf_javascript": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.26
   },
   "test_redteam2.PdfCarriers2.test_huge_text_rise_off_page": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.26
   },
   "test_redteam2.PdfCarriers2.test_instruction_in_a_pdf_name": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_redteam2.PdfCarriers2.test_instruction_in_pdf_comment": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_redteam2.PdfCarriers2.test_zero_horizontal_scaling": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_redteam2.RotatedPages.test_rotated_clean_page_is_clean": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.57
   },
   "test_redteam2.RotatedPages.test_rotated_page_with_hidden_text": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.19
   },
   "test_redteam2.WebCarriers2.test_css_generated_content": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam2.WebCarriers2.test_html_in_data_uri_iframe_and_plain_text_uri": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam2.WebCarriers2.test_markdown_link_title_and_reference_definition": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam2.WebCarriers2.test_svg_in_data_uri": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam3.ColourMatched.test_coloured_text_on_same_colour": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 1.27
   },
   "test_redteam3.ColourMatched.test_contrasting_colours_are_visible": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_redteam3.ColourMatched.test_nearly_same_colour": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.27
   },
   "test_redteam3.DirectionAndAccessibility.test_bdo_and_dir_rtl": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam3.DirectionAndAccessibility.test_docx_rtl_run": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam3.DirectionAndAccessibility.test_mirror_and_custom_font": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam3.DirectionAndAccessibility.test_pdf_reversed_chars": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_redteam3.Forensics.test_glyph_audit_sees_invisible_white_tiny": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.49
   },
   "test_redteam3.Forensics.test_glyph_ocr_catches_the_font_swap": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 3.22
   },
   "test_redteam3.Forensics.test_glyph_ocr_quiet_on_a_clean_sheet": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 10.47
   },
   "test_redteam3.Forensics.test_provenance_flags_the_appended_stream": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.28
   },
   "test_redteam3.Forensics.test_reference_diff": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.31
   },
   "test_redteam3.Forensics.test_reference_diff_of_identical_files_is_quiet": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.3
   },
   "test_redteam3.Impersonation.test_benign_texts": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam3.Impersonation.test_every_forgery_is_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam3.Impersonation.test_forgery_in_hidden_html_and_pdf": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.27
   },
   "test_redteam3.Impersonation.test_forgery_in_tool_output_is_warned_by_the_hook": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.15
   },
   "test_redteam3.MoreArchives.test_single_file_compression": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.01
   },
   "test_redteam3.MoreArchives.test_tar_path_traversal_and_7z": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam3.MoreArchives.test_tar_variants": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.02
   },
   "test_redteam3.ReadingOrder.test_matching_tags_are_quiet": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.3
   },
   "test_redteam3.ReadingOrder.test_reordered_tags": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.39
+  },
+  "test_redteam3.ScannerDoS.test_each_input_is_fast": {
+   "status": "pass",
+   "doc": "",
+   "detail": "",
+   "seconds": 6.82
+  },
+  "test_redteam3.ScannerDoS.test_markdown_and_html_paths": {
+   "status": "pass",
+   "doc": "",
+   "detail": "",
+   "seconds": 1.02
   },
   "test_redteam3.TaskModifiers.test_actualtext_shortens_the_formula": {
    "status": "pass",
    "doc": "Printed a(b*c+ab)*c*, extractors read a(b*c+ab)* - only the per-span glyph audit sees the difference.",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.24
   },
   "test_redteam3.TaskModifiers.test_covering_part_of_the_task": {
    "status": "pass",
    "doc": "The inverse: a white box hides 'c*' from the student, the text layer keeps it.",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_redteam3.TaskModifiers.test_docx_vanish_modifier": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam3.TaskModifiers.test_html_short_hidden_fragment": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam3.TaskModifiers.test_latex_white_modifier": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam3.TaskModifiers.test_pdf_two_character_formula_extension": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.23
   },
   "test_redteam3.TaskModifiers.test_pdf_white_modifier": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.25
   },
   "test_redteam3.TaskModifiers.test_text_level": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam3.WhitespaceStego.test_normal_trailing_spaces": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_redteam3.WhitespaceStego.test_snow_style_trailing_whitespace": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.BenignHtml.test_hidden_state_does_not_leak_after_close": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.BenignHtml.test_long_hidden_text_is_med": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.BenignHtml.test_malformed_html_does_not_crash": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.87
   },
   "test_web_text.BenignHtml.test_menu_hidden_short_not_high": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.BenignHtml.test_title_links_and_images": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.HiddenHtml.test_attributes": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.HiddenHtml.test_benign_comment_info": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.HiddenHtml.test_comment": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.HiddenHtml.test_css_class_from_style_block": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.HiddenHtml.test_css_id_from_style_block": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.HiddenHtml.test_each_hiding_technique_is_removed_and_flagged": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.02
   },
   "test_web_text.HiddenHtml.test_entity_encoded_injection": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.HiddenHtml.test_hidden_input_value": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.HiddenHtml.test_meta_description": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.HiddenHtml.test_script_and_json_ld": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.HiddenHtml.test_visible_injection_is_kept_but_flagged": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.HiddenHtml.test_white_text_flagged": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.HiddenHtml.test_zero_width_and_tags_in_visible_html": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.MarkdownText.test_benign_markdown_clean": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.MarkdownText.test_html_comment": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.MarkdownText.test_image_alt_and_title": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.MarkdownText.test_inline_hidden_html": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.MarkdownText.test_json_value": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.MarkdownText.test_multiline_comment": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.MarkdownText.test_reference_comment": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.MarkdownText.test_tag_characters_stripped_from_output": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   },
   "test_web_text.Svg.test_svg_hidden_text": {
    "status": "pass",
    "doc": "",
    "detail": "",
-   "subtest": ""
+   "seconds": 0.0
   }
  }
 }

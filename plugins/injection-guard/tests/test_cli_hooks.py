@@ -74,6 +74,8 @@ class Hooks(unittest.TestCase):
         self.d = workdir()
         if os.path.exists(CONFIG):
             os.remove(CONFIG)
+        # tests build byte-identical PDFs; a registry entry left by another test would unlock them (order dependency)
+        shutil.rmtree(REGISTRY, ignore_errors=True)
 
     def tearDown(self):
         if os.path.exists(CONFIG):

@@ -20,4 +20,4 @@ python3 -I plugins/injection-guard/tests/run_tests.py        # whole suite
 python3 -I plugins/injection-guard/tests/report.py           # + docs/test_results.json
 python3 -I docs/gen_docs.py                                  # regenerate the docs
 ```
-CI runs the suite on every push (`.github/workflows/tests.yml`). Tests that need local course files skip themselves elsewhere. Never delete a test: each one is an attack that was caught once.
+CI runs the suite on every push (`.github/workflows/tests.yml`) in 4 parallel shards balanced by `tests/durations.json` (`report.py --shard K --of 4`); a merge job combines them and fails if a shard failed, a test ran twice or a shard is missing. Refresh the durations after adding slow tests: `report.py --write-durations`. Tests that need local course files skip themselves elsewhere. Never delete a test: each one is an attack that was caught once.

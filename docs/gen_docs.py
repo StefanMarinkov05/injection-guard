@@ -87,6 +87,9 @@ M = [
   ["test_redteam3.TaskModifiers.*"]),
  ("T12", "text", "Whitespace steganography", "text, Markdown, LaTeX, HTML sources", "bits in trailing spaces and tabs (SNOW style)",
   "detects long/mixed trailing whitespace on several lines and tries to decode it", "HIGH/MED", ["test_redteam3.WhitespaceStego.*"]),
+ ("T13", "text", "Scanner DoS resistance", "every regex on every input", "a document of one 100k-letter word, 100k newlines or a long URL-encoded run made single patterns quadratic (247 s, 70 s, 6 s)",
+  "anchored/possessive patterns, [ \\t]* instead of \\s* after line starts, tokenise-then-filter; time limits per pathological input in the suite", "-",
+  ["test_redteam3.ScannerDoS.*"]),
  ("T9", "text", "Robustness", "large or odd input", "slow the scanner down or crash it", "bounded passes; 2.4 MB in a few seconds", "-",
   ["test_common.Robustness.*"]),
  # ---------------------------------------------------------------- PDF
@@ -263,6 +266,7 @@ REDTEAM = [
  (4, "payload in tar, tar.gz/bz2/xz, gz/bz2/xz; 7z/rar", "not unpacked", "archive support (A1); 7z/rar MED"),
  (4, "bits in trailing whitespace", "missed", "whitespace steganography (T12)"),
  (4, "tag reading order reversed against the drawing order", "missed", "reading-order check (F6)"),
+ (5, "100k-letter word / 100k newlines / long %xx run (scanner DoS)", "247 s / 70 s / 6 s per scan", "linear patterns (T13); CI 8 min -> 4 parallel shards"),
 ]
 
 # false alarms found by scanning the real course files, and how they were removed without losing a test

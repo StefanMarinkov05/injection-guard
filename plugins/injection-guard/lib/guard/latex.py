@@ -12,7 +12,7 @@ LATEX_EXT = {".tex", ".sty", ".cls", ".bib", ".ltx", ".dtx", ".ins", ".bbx", ".c
 
 
 def looks_like_latex(text):
-    return bool(re.search(r"\\(documentclass|begin\{document\}|usepackage|NeedsTeXFormat|ProvidesPackage|ProvidesClass)\b|^\s*@\w+\s*\{", text[:20000], re.M))
+    return bool(re.search(r"\\(documentclass|begin\{document\}|usepackage|NeedsTeXFormat|ProvidesPackage|ProvidesClass)\b|^[ \t]*@\w+\s*\{", text[:20000], re.M))
 
 
 def _braced(s, i):
@@ -171,7 +171,7 @@ def scan_latex(src, F, name="tex"):
             F.add("MED", "\\catcode change in a document (can make text mean something else)", f"{name}:{_line(src, m.start())}", m.group(0))
             break
     # 5 BibTeX: fields that are not printed by most styles
-    if name.endswith(".bib") or re.search(r"^\s*@\w+\s*\{", src, re.M):
+    if name.endswith(".bib") or re.search(r"^[ \t]*@\w+\s*\{", src, re.M):
         for m in re.finditer(r"\b(note|annote|annotation|abstract|keywords|comment|howpublished|addendum)\s*=\s*[{\"]", src, re.I):
             a, _ = _args(src, m.end() - 1, 1) if src[m.end() - 1] == "{" else ([src[m.end():src.find('"', m.end())]], 0)
             val = a[0] if a else ""

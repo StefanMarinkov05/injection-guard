@@ -4,12 +4,12 @@ from PIL import Image
 from .common import DIRECTIVE, IMPERSONATION, KEYWORDS, STRONG, check_text, hidden_task_signal, short, strip_invisible, whitespace_stego
 
 MD_COMMENT = re.compile(r"<!--(.*?)-->", re.S)
-MD_REFCOMMENT = re.compile(r"^\s*\[(?://|comment|_)?[^\]]*\]:\s*#\s*[\(\"'](.*?)[\)\"']\s*$", re.M)
+MD_REFCOMMENT = re.compile(r"^[ \t]*\[(?://|comment|_)?[^\]]*\]:\s*#\s*[\(\"'](.*?)[\)\"']\s*$", re.M)
 HIDDEN_TAG = re.compile(
     r"<(span|div|p|section|small|font)\b[^>]*(style\s*=\s*\"[^\"]*(display\s*:\s*none|visibility\s*:\s*hidden|font-size\s*:\s*0|opacity\s*:\s*0)[^\"]*\""
     r"|\bhidden\b|aria-hidden\s*=\s*\"true\")[^>]*>(.*?)</\1\s*>", re.S | re.I)
 MD_TITLE = re.compile(r"\]\(\s*<?[^)\s>]+>?\s+\"([^\"]+)\"\s*\)")
-MD_REFDEF = re.compile(r"(?m)^\s*\[[^\]]+\]:\s*<?\S+?>?\s+(?:\"([^\"]+)\"|'([^']+)'|\(([^)]+)\))\s*$")
+MD_REFDEF = re.compile(r"(?m)^[ \t]*\[[^\]]+\]:\s*<?\S+?>?\s+(?:\"([^\"]+)\"|'([^']+)'|\(([^)]+)\))\s*$")
 MD_IMG = re.compile(r"!\[([^\]]*)\]\(([^)\s]*)(?:\s+\"([^\"]*)\")?\)")
 
 

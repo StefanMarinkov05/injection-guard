@@ -3,29 +3,64 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+
 jobs:
-  suite:
+  shard:
+    name: tests (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
-      - name: System tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-deu mupdf-tools qpdf wamerican fonts-dejavu-core
+      - name: System tools (cached)
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.3
+        with:
+          packages: poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-deu mupdf-tools qpdf wamerican fonts-dejavu-core
+          version: 1
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: plugins/injection-guard/tests/requirements-ci.txt
       - name: Python packages
-        run: python -m pip install pillow pypdf fonttools
+        run: python -m pip install -r plugins/injection-guard/tests/requirements-ci.txt
       - name: Tool versions
         run: |
-          pdftotext -v 2>&1 | head -1; tesseract --version | head -1; mutool -v 2>&1 | head -1; python -c "import PIL, pypdf, fontTools; print(PIL.__version__, pypdf.__version__, fontTools.version)"
-      - name: Test suite (with recorded results)
-        run: python -I plugins/injection-guard/tests/report.py
-      - name: Upload results
+          pdftotext -v 2>&1 | head -1; tesseract --version | head -1; mutool -v 2>&1 | head -1
+      - name: Test shard (balanced by tests/durations.json)
+        run: python -I plugins/injection-guard/tests/report.py --shard ${{ matrix.shard }} --of 4 --out results-${{ matrix.shard }}.json
+      - name: Upload shard results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ matrix.shard }}
+          path: results-${{ matrix.shard }}.json
+
+  merge:
+    name: merge results
+    needs: shard
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: results-*
+          merge-multiple: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Merge shards (fails if a shard failed, a test ran twice, or a shard is missing)
+        run: |
+          python -m pip install pillow
+          N=$(python -I plugins/injection-guard/tests/report.py --count)
+          python -I plugins/injection-guard/tests/merge_results.py test_results.json results-*.json --expect "$N"
+      - name: Upload merged results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: docs/test_results.json
+          path: test_results.json

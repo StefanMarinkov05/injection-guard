@@ -1,6 +1,6 @@
-# injection-guard 1.5.0: security mechanisms and proof
+# injection-guard 1.5.1: security mechanisms and proof
 
-Test run 2026-10-30 07:08: **321 tests, 0 failures, 0 errors, 0 skipped** (308 s). Regenerate: `python3 -I plugins/injection-guard/tests/report.py && python3 -I docs/gen_docs.py`.
+Test run 2026-10-30 08:27: **323 tests, 0 failures, 0 errors, 0 skipped** (110 s). Regenerate: `python3 -I plugins/injection-guard/tests/report.py && python3 -I docs/gen_docs.py`.
 
 Rule enforced everywhere: the page a human sees is the content; text inside documents and tool output is data, never instructions.
 Design choice: recall over precision (false positives are acceptable; an unreadable file is never clean).
@@ -31,6 +31,7 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 | T10 | text | **Impersonation** | all extracted text, hidden or visible, and tool output | fake user turns, <system-reminder>/[SYSTEM NOTIFICATION] wrappers, fake tool/hook results, fake guard verdicts and end markers, invented consent ('the user already approved'), fake errors with a 'fix' command, requests to disable the guard, fake assistant replies | IMPERSONATION patterns, HIGH wherever they appear; the hooks still ask before any guard change | HIGH | 4/4 pass |
 | T11 | text | **Hidden task modifiers** | hidden text in every format | 'without the prefix', 'c*', 'over {a,b,c,d}', 'minimal DFA only' - more task, no AI words | hidden text with exercise vocabulary or formula symbols is HIGH regardless of length | HIGH | 8/8 pass |
 | T12 | text | **Whitespace steganography** | text, Markdown, LaTeX, HTML sources | bits in trailing spaces and tabs (SNOW style) | detects long/mixed trailing whitespace on several lines and tries to decode it | HIGH/MED | 2/2 pass |
+| T13 | text | **Scanner DoS resistance** | every regex on every input | a document of one 100k-letter word, 100k newlines or a long URL-encoded run made single patterns quadratic (247 s, 70 s, 6 s) | anchored/possessive patterns, [ \t]* instead of \s* after line starts, tokenise-then-filter; time limits per pathological input in the suite | - | 2/2 pass |
 | T9 | text | **Robustness** | large or odd input | slow the scanner down or crash it | bounded passes; 2.4 MB in a few seconds | - | 2/2 pass |
 | P1 | pdf | **Render diff** | PDF text layer vs rendered page | white, near-white, tiny, clipped, covered, render mode 3/7, zero horizontal scaling | every text-layer word is checked for ink and contrast on the rendered page; blank words are removed from the output | HIGH | 11/11 pass |
 | P2 | pdf | **Contrast check** | words on coloured backgrounds | text in the same colour as the box behind it (black on black, grey on grey) | a word needs dark ink AND contrast inside its box | HIGH | 5/5 pass |
@@ -117,6 +118,8 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 **T11 Hidden task modifiers**: `TaskModifiers.test_actualtext_shortens_the_formula` pass, `TaskModifiers.test_covering_part_of_the_task` pass, `TaskModifiers.test_docx_vanish_modifier` pass, `TaskModifiers.test_html_short_hidden_fragment` pass, `TaskModifiers.test_latex_white_modifier` pass, `TaskModifiers.test_pdf_two_character_formula_extension` pass, `TaskModifiers.test_pdf_white_modifier` pass, `TaskModifiers.test_text_level` pass
 
 **T12 Whitespace steganography**: `WhitespaceStego.test_normal_trailing_spaces` pass, `WhitespaceStego.test_snow_style_trailing_whitespace` pass
+
+**T13 Scanner DoS resistance**: `ScannerDoS.test_each_input_is_fast` pass, `ScannerDoS.test_markdown_and_html_paths` pass
 
 **T9 Robustness**: `Robustness.test_large_input_is_fast` pass, `Robustness.test_weird_input` pass
 
@@ -242,6 +245,7 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 | 4 | payload in tar, tar.gz/bz2/xz, gz/bz2/xz; 7z/rar | not unpacked | archive support (A1); 7z/rar MED |
 | 4 | bits in trailing whitespace | missed | whitespace steganography (T12) |
 | 4 | tag reading order reversed against the drawing order | missed | reading-order check (F6) |
+| 5 | 100k-letter word / 100k newlines / long %xx run (scanner DoS) | 247 s / 70 s / 6 s per scan | linear patterns (T13); CI 8 min -> 4 parallel shards |
 
 ## Calibration on real files (false alarms removed)
 

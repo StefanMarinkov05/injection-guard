@@ -1,7 +1,7 @@
 """Shared patterns, findings, text checks, config and scan registry for injection-guard."""
 import base64, codecs, hashlib, html, json, os, re, time, unicodedata, urllib.parse
 
-VERSION = "1.5.0"
+VERSION = "1.5.1"
 HOME = os.path.expanduser("~")
 CACHE = os.path.join(HOME, ".cache", "injection-guard")
 REGISTRY = os.path.join(CACHE, "scanned")
@@ -79,7 +79,7 @@ _STRONG_EXTRA = (
     r"|\bthe (task|instructions?|text|prompt|exercise)s? (above|before|so far) (is|are|was|were) (outdated|fake|wrong|a test|obsolete|void|cancelled|a decoy)"
     r"|\bthe (actual|real|true) (task|instructions?|exercise) (follows?|is below|comes next|is the following)"
     r"|<\|(im_start|im_end|system|user|assistant|endoftext|eot_id|start_header_id)\|>|\[/?INST\]|<</?SYS>>"
-    r"|(^|\n)\s*#{2,}\s*(instruction|system|response|system prompt)\s*:|\n\n(Human|Assistant)\s*:"
+    r"|(^|\n)[ \t]*#{2,}\s*(instruction|system|response|system prompt)\s*:|\n\n(Human|Assistant)\s*:"
     r"|\bif you (can|are able to) (read|see) this\b|\bif you are reading this (as|in|via) (plain |raw )?text"
     r"|\b(text-only|plain-text|machine|automated) readers?\s*[:,]|\bif this (text|sentence|line) is visible to you\b"
     r"|\bwenn du (eine |ein )?(KI|AI|Sprachmodell|Chatbot|LLM|Assistent)\b|\bwenn Sie (eine |ein )?(KI|Sprachmodell)\b"
@@ -90,7 +90,7 @@ _STRONG_EXTRA = (
     r"|\bsi eres (una? )?(IA|inteligencia artificial|modelo de lenguaje|asistente)"
     r"|\bignora (todas )?las instrucciones (anteriores|previas)|\bignora (tutte )?le istruzioni precedenti|\bse sei un'?(IA|intelligenza artificiale)")
 STRONG = re.compile(STRONG.pattern + "|" + _STRONG_EXTRA, re.I)
-CHAT_RX = re.compile(r"(^|\n)\s*#{2,}\s*(instruction|system|response|system prompt)\s*:|\n\n(Human|Assistant)\s*:", re.I)
+CHAT_RX = re.compile(r"(^|\n)[ \t]*#{2,}\s*(instruction|system|response|system prompt)\s*:|\n\n(Human|Assistant)\s*:", re.I)
 KEYWORDS = re.compile(KEYWORDS.pattern + r"|\b(?-i:KI)\b|\b(Sprachmodells?|künstliche Intelligenz|modèle de langage|modelo de lenguaje)\b", re.I)
 DIRECTIVE = re.compile(DIRECTIVE.pattern +
                        r"|\b(nenne|benenne|bezeichne|beschrifte)\b[^.\n]{0,40}\b(Zustände|Zustand|Symbole?|Variablen?|Startzustand|Endzustände)\b"
@@ -103,7 +103,7 @@ LOOKALIKE = set("аеорсухіјһԁԛԝѕАВЕКМ"
 LOOKALIKE_RX = re.compile("[" + "".join(sorted(LOOKALIKE)) + "]")
 COMPAT_RX = re.compile("[！-～Ⅰ-ↈ①-⓿\U0001d7ce-\U0001d7ff\U0001f100-\U0001f1ff]")
 MATH_WORD_RX = re.compile("[\U0001d400-\U0001d6a5]{4,}")
-SENTENCE = re.compile(r"[A-Za-z]{2,}(?:[ ,'][A-Za-z]{1,}){6,}[.!?:]")
+SENTENCE = re.compile(r"\b[A-Za-z]{2,}+(?:[ ,'][A-Za-z]++){6,}[.!?:]")  # anchored + possessive: linear on long words
 
 # Text that poses as the user, the harness, a tool, the guard itself, or invents consent / errors with a "fix".
 IMPERSONATION = re.compile(
@@ -111,7 +111,7 @@ IMPERSONATION = re.compile(
     r"|<\s*/?\s*(function_results?|function_calls|tool_result|tool_use|antml:\w+|invoke|parameter name)\b"
     r"|\bhookSpecificOutput\b|\bpermissionDecision(Reason)?\b|\"systemMessage\"\s*:|\badditionalContext\"\s*:"
     r"|<\s*/?\s*(user|assistant|human|system|developer|operator)(_message)?\s*>"
-    r"|(^|\n)\s*(System|Developer|Operator) (message|prompt|note|instruction)s?\s*:"
+    r"|(^|\n)[ \t]*(System|Developer|Operator) (message|prompt|note|instruction)s?\s*:"
     r"|\b(message|note|instructions?|update|notice) from (anthropic|openai|the claude( code)? team|your (operator|developer|administrator|admin|owner))\b"
     r"|===\s*injection-guard|\bVERDICT:\s*(clean|HIGH|MED)\b|<<<\s*(END\s+)?UNTRUSTED CONTENT|\binjection-guard\s*(\d|:|\(|says|reports|verdict)"
     r"|\b(the )?user (has|had) (already )?(explicitly )?(approved|confirmed|authori[sz]ed|agreed|consented)\b"
@@ -123,7 +123,7 @@ IMPERSONATION = re.compile(
     r"|\bINJECTION_GUARD_MODE\s*=|\btrusted_paths\b\s*[\":=]"
     r"|\b(disable|turn off|deactivate|uninstall|bypass|skip|remove) (the )?(injection[- ]guard|guard|scanner|hooks?|safety checks?|security checks?)\b"
     r"|\bclaude plugins? (disable|uninstall|remove)\b"
-    r"|(^|\n)\s*(Assistant|AI|Claude|ChatGPT|Model)\s*:\s*(Sure|Of course|Okay|OK|I will|I'll|Understood|Certainly|Done)\b",
+    r"|(^|\n)[ \t]*(Assistant|AI|Claude|ChatGPT|Model)\s*:\s*(Sure|Of course|Okay|OK|I will|I'll|Understood|Certainly|Done)\b",
     re.I)
 
 # Hidden text that changes the task without addressing anyone ("without the prefix", "c*", "over {a,b,c,d}").
@@ -283,8 +283,9 @@ def check_text(text, where, F, hidden=False, keywords=True, _depth=0):
     if mixed:
         F.add("MED", "mixed-script words (homoglyphs: Cyrillic/Greek letters posing as Latin)", where, ", ".join(mixed[:10]))
     # identifiers such as state names: one look-alike letter plus digits/underscores ("q0" with Cyrillic q)
-    ids = sorted(w for w in set(re.findall(r"[^\W\d_]+[\d_]+\w*|\w*[\d_]+[^\W\d_]+", clean))
-                 if not w.isascii() and any(c in LOOKALIKE for c in w) and w.translate(CONFUSABLE).isascii())
+    # tokenise, then filter (a regex alternative here backtracks quadratically on very long words)
+    ids = sorted(w for w in set(re.findall(r"\w+", clean)) if not w.isascii() and any(c in LOOKALIKE for c in w)
+                 and any(ch.isdigit() or ch == "_" for ch in w) and any(ch.isalpha() for ch in w) and w.translate(CONFUSABLE).isascii())
     if ids:
         F.add("MED", "identifier with look-alike letters (e.g. a state name q0 written with a Cyrillic letter)", where, ", ".join(ids[:10]))
     for m in list(IMPERSONATION.finditer(flat))[:5]:
@@ -431,7 +432,7 @@ def decoded_variants(clean, where, F, depth=0, plain=None):
             continue
         if STRONG.search(dec) or KEYWORDS.search(dec):
             F.add("HIGH", f"{enc} blob that decodes to AI-directed text", where, short(dec, 300))
-        elif len(dec) >= 24 and re.search(r"[A-Za-z]{3,} [A-Za-z]{3,} [A-Za-z]{3,}", dec):
+        elif len(dec) >= 24 and re.search(r"\b[A-Za-z]{3,}+ [A-Za-z]{3,}+ [A-Za-z]{3,}+", dec):
             F.add("MED", f"{enc} blob that decodes to readable text", where, short(dec, 200))
         if depth < 1:
             check_text(dec, where + f" (decoded {enc})", F, hidden=True, _depth=depth + 1)
