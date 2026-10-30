@@ -565,3 +565,79 @@ def glyph_ocr(path, F, max_pages=10, max_glyphs=600):
         F.add("HIGH", "glyph shapes do not match their Unicode mapping (font remapped)", "forensics", detail)
     else:
         F.add("MED", "a glyph's shape may not match its Unicode mapping (single OCR mismatch)", "forensics", detail)
+
+
+# ---------------------------------------------------------------- 5. tagged reading order vs drawing order
+def reading_order(path, F, max_pages=100):
+    """Tagged PDFs carry a structure tree whose order is the *reading* order (screen readers, tag-aware extractors).
+    If it reorders the marked content of a page, a human reads one sequence and such a reader another
+    (e.g. drawn 'a(b*c+ab)*' 'c*', tagged 'c*' 'a(b*c+ab)*')."""
+    try:
+        import pypdf
+        r = pypdf.PdfReader(path, strict=False)
+        root = r.trailer["/Root"].get_object().get("/StructTreeRoot")
+    except Exception:
+        return
+    if root is None:
+        return
+    pages = {p.indirect_reference.idnum: i for i, p in enumerate(r.pages[:max_pages], 1) if p.indirect_reference is not None}
+    order = {}  # page -> MCIDs in structure order
+    seen = set()
+
+    def walk(node, pg=None, depth=0):
+        if depth > 200:
+            return
+        try:
+            node = node.get_object()
+        except Exception:
+            return
+        if isinstance(node, int):
+            if pg is not None:
+                order.setdefault(pg, []).append(node)
+            return
+        if isinstance(node, list):
+            for k in node:
+                walk(k, pg, depth + 1)
+            return
+        if not hasattr(node, "get"):
+            return
+        key = id(node)
+        if key in seen:
+            return
+        seen.add(key)
+        p = node.get("/Pg")
+        if p is not None and getattr(p, "idnum", None) in pages:
+            pg = pages[p.idnum]
+        if "/MCID" in node:
+            if pg is not None:
+                order.setdefault(pg, []).append(int(node["/MCID"]))
+            return
+        k = node.get("/K")
+        if k is not None:
+            walk(k, pg, depth + 1)
+    walk(root.get("/K"))
+    for i, page in enumerate(r.pages[:max_pages], 1):
+        tagged = order.get(i)
+        if not tagged or len(tagged) < 2:
+            continue
+        try:
+            data = page.get_contents().get_data()
+        except Exception:
+            continue
+        drawn = [int(m) for m in re.findall(rb"/MCID\s+(\d+)", data)]
+        texts = {}
+        for m in re.finditer(rb"/MCID\s+(\d+)\s*>>\s*BDC(.*?)EMC", data, re.S):
+            lits = re.findall(rb"\(((?:\\.|[^\\)])*)\)", m.group(2))
+            texts[int(m.group(1))] = b"".join(lits).decode("latin1")[:40]
+        common = [x for x in tagged if x in set(drawn)]
+        pos = {x: k for k, x in enumerate(drawn)}
+        seq = [pos[x] for x in common]
+        n = len(seq)
+        if n < 2:
+            continue
+        inv = sum(1 for a in range(n) for b in range(a + 1, n) if seq[a] > seq[b]) if n <= 2000 else 0
+        frac = inv / (n * (n - 1) / 2)
+        if inv and (frac > 0.2 or n <= 6):
+            show = " | ".join(texts.get(x, f"MCID {x}") for x in common[:8])
+            F.add("MED", "tagged reading order differs from the drawing order (screen readers and tag-aware extractors read another sequence)",
+                  f"p.{i}", f"{inv} inversion(s) of {n} items; reading order: {short(show, 200)}")

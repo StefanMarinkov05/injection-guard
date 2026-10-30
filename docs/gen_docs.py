@@ -157,6 +157,8 @@ M = [
  ("F5", "forensic", "Glyph OCR", "embedded fonts (TrueType, CFF incl. CID-keyed, Type1)", "a font whose glyph for 'a' draws 'b' (and vice versa) - consistent text layer, different picture",
   "every alphanumeric glyph rendered at its own scale and read by tesseract with confidence; symmetric swaps or several confident mismatches HIGH", "HIGH/MED",
   ["test_redteam3.Forensics.test_glyph_ocr_catches_the_font_swap", "test_redteam3.Forensics.test_glyph_ocr_quiet_on_a_clean_sheet"]),
+ ("F6", "forensic", "Tagged reading order", "tagged PDFs (structure tree)", "tags put the marked content in another order than it is drawn - screen readers and tag-aware extractors read e.g. 'c* a(b*c+ab)*'",
+  "structure-tree MCID order compared with the content-stream order per page (inversions)", "MED", ["test_redteam3.ReadingOrder.*"]),
  ("P13", "pdf", "Trap corpus baseline", "21 LaTeX-built trap PDFs (tools/trap_corpus)", "every technique of the handbook", "pinned verdicts and finding kinds", "-",
   ["test_pdf.Corpus.*"]),
  # ---------------------------------------------------------------- web, markdown
@@ -260,6 +262,7 @@ REDTEAM = [
  (4, "bdo / dir=rtl / bidi override, DOCX rtl, PDF ReversedChars", "missed", "direction checks (W6)"),
  (4, "payload in tar, tar.gz/bz2/xz, gz/bz2/xz; 7z/rar", "not unpacked", "archive support (A1); 7z/rar MED"),
  (4, "bits in trailing whitespace", "missed", "whitespace steganography (T12)"),
+ (4, "tag reading order reversed against the drawing order", "missed", "reading-order check (F6)"),
 ]
 
 # false alarms found by scanning the real course files, and how they were removed without losing a test
@@ -386,7 +389,7 @@ def main():
          r"\node[box=orange!12,right=of src] (gate) {\textbf{hooks}\\ \footnotesize read gate, WebFetch route, output scan, self-protection};",
          r"\node[box=green!10,right=of gate] (scan) {\textbf{safe-read / safe-fetch}\\ \footnotesize scanner + sanitiser};",
          r"\node[box=gray!10,right=of scan] (agent) {\textbf{agent}\\ \footnotesize report first, visible text only};",
-         r"\node[box=white,below=of scan,text width=29mm] (det) {\footnotesize detectors\\ T1-T9, P1-P13, W1-W5,\\ D1-D3, L1-L3, A1, F1-F5, I1-I6, N1-N2};",
+         r"\node[box=white,below=of scan,text width=29mm] (det) {\footnotesize detectors\\ T1-T9, P1-P13, W1-W5,\\ D1-D3, L1-L3, A1, F1-F6, I1-I6, N1-N2};",
          r"\node[box=white,below=of gate,text width=29mm] (reg) {\footnotesize registry\\ SHA-256 $\to$ verdict};",
          r"\draw[-Latex] (src)--(gate); \draw[-Latex] (gate)--node[above,font=\scriptsize]{gated}(scan); \draw[-Latex] (scan)--node[above,font=\scriptsize]{envelope}(agent);",
          r"\draw[-Latex] (scan)--(det); \draw[-Latex] (det)--node[below,font=\scriptsize]{verdict}(reg); \draw[-Latex,dashed] (reg)--node[left,font=\scriptsize]{lookup}(gate);",

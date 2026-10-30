@@ -286,3 +286,24 @@ class Forensics(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReadingOrder(unittest.TestCase):
+    """Tag reading order differs from what is drawn: a screen reader / tag-aware extractor reads another formula."""
+
+    def build(self, tag_order):
+        content = (b"/P << /MCID 0 >> BDC " + text_op("a(b*c+ab)*", x=72, y=700) + b" EMC "
+                   b"/P << /MCID 1 >> BDC " + text_op("c*", x=160, y=700) + b" EMC")
+        # objects: 1 catalog, 2 pages, 3 page, 4 font F1, 5 content, 6 StructTreeRoot, 7/8 elements
+        root = b"<< /Type /StructTreeRoot /K [" + b" ".join(b"%d 0 R" % (7 + k) for k in tag_order) + b"] >>"
+        els = [b"<< /Type /StructElem /S /P /P 6 0 R /Pg 3 0 R /K %d >>" % k for k in (0, 1)]
+        return build_pdf(os.path.join(workdir(), "t.pdf"), [content], extra_objs=[root] + els,
+                         catalog_extra=b"/StructTreeRoot 6 0 R /MarkInfo << /Marked true >>")
+
+    def test_reordered_tags(self):
+        _, F = pdfscan(self.build([1, 0]))
+        self.assertTrue(has_kind(F, "tagged reading order differs", "MED"), F.items)
+
+    def test_matching_tags_are_quiet(self):
+        _, F = pdfscan(self.build([0, 1]))
+        self.assertFalse(has_kind(F, "reading order"), F.items)

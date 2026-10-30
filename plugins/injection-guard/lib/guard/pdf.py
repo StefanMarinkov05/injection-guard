@@ -458,6 +458,7 @@ def scan_pdf(path, F, max_pages=None, image_dir=None, ocr_pages=30, reference=No
     from . import forensic
     _step(F, "glyph audit", forensic.trace_audit, path, F)
     _step(F, "provenance", forensic.provenance, path, F)
+    _step(F, "reading order", forensic.reading_order, path, F)
     if ocr_pages:
         _step(F, "glyph OCR", forensic.glyph_ocr, path, F, max_pages=min(10, ocr_pages))
     if reference:

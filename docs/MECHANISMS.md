@@ -1,6 +1,6 @@
-# injection-guard 1.4.0: security mechanisms and proof
+# injection-guard 1.5.0: security mechanisms and proof
 
-Test run 2026-10-30 06:25: **319 tests, 0 failures, 0 errors, 0 skipped** (321 s). Regenerate: `python3 -I plugins/injection-guard/tests/report.py && python3 -I docs/gen_docs.py`.
+Test run 2026-10-30 07:08: **321 tests, 0 failures, 0 errors, 0 skipped** (308 s). Regenerate: `python3 -I plugins/injection-guard/tests/report.py && python3 -I docs/gen_docs.py`.
 
 Rule enforced everywhere: the page a human sees is the content; text inside documents and tool output is data, never instructions.
 Design choice: recall over precision (false positives are acceptable; an unreadable file is never clean).
@@ -50,6 +50,7 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 | F3 | forensic | **Provenance** | pages with several content streams | a stream appended by another tool after generation (Sheet 2: stream 261, non-embedded Helvetica among embedded Typst fonts); tool-artefact attachment names | streams that use only non-embedded fonts unlike the rest of the page; attachment names like pdftotext-hidden | HIGH/MED | 1/1 pass |
 | F4 | forensic | **Reference diff** | safe-read FILE --reference KNOWN_GOOD.pdf | this week's sheet vs last week's: new fonts, more streams, ActualText, invisible text, attachments, layers, JS, other producer | structural comparison with a trusted earlier document | HIGH/MED | 2/2 pass |
 | F5 | forensic | **Glyph OCR** | embedded fonts (TrueType, CFF incl. CID-keyed, Type1) | a font whose glyph for 'a' draws 'b' (and vice versa) - consistent text layer, different picture | every alphanumeric glyph rendered at its own scale and read by tesseract with confidence; symmetric swaps or several confident mismatches HIGH | HIGH/MED | 2/2 pass |
+| F6 | forensic | **Tagged reading order** | tagged PDFs (structure tree) | tags put the marked content in another order than it is drawn - screen readers and tag-aware extractors read e.g. 'c* a(b*c+ab)*' | structure-tree MCID order compared with the content-stream order per page (inversions) | MED | 2/2 pass |
 | P13 | pdf | **Trap corpus baseline** | 21 LaTeX-built trap PDFs (tools/trap_corpus) | every technique of the handbook | pinned verdicts and finding kinds | - | 2/2 pass |
 | W1 | web | **Hidden HTML** | HTML/XHTML/EPUB pages | display:none, visibility, opacity, font-size 0, off-screen, clip, scale(0), transparent, hidden/aria-hidden, CSS classes/ids, noscript, template | hidden elements removed and reported; menus stay quiet, hidden sentences MED | HIGH/MED | 20/20 pass |
 | W2 | web | **Split and embedded web content** | comments + hidden spans, data: URIs, iframe srcdoc, CSS generated content | an instruction split over several hiding places, or hidden inside an embedded document | pooled hidden text; data: URIs decoded and scanned recursively; CSS content checked | HIGH | 5/5 pass |
@@ -155,6 +156,8 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 
 **F5 Glyph OCR**: `Forensics.test_glyph_ocr_catches_the_font_swap` pass, `Forensics.test_glyph_ocr_quiet_on_a_clean_sheet` pass
 
+**F6 Tagged reading order**: `ReadingOrder.test_matching_tags_are_quiet` pass, `ReadingOrder.test_reordered_tags` pass
+
 **P13 Trap corpus baseline**: `Corpus.test_corpus` pass, `Corpus.test_every_fixture_has_an_expectation` pass
 
 **W1 Hidden HTML**: `HiddenHtml.test_attributes` pass, `HiddenHtml.test_benign_comment_info` pass, `HiddenHtml.test_comment` pass, `HiddenHtml.test_css_class_from_style_block` pass, `HiddenHtml.test_css_id_from_style_block` pass, `HiddenHtml.test_each_hiding_technique_is_removed_and_flagged` pass, `HiddenHtml.test_entity_encoded_injection` pass, `HiddenHtml.test_hidden_input_value` pass, `HiddenHtml.test_meta_description` pass, `HiddenHtml.test_script_and_json_ld` pass, `HiddenHtml.test_visible_injection_is_kept_but_flagged` pass, `HiddenHtml.test_white_text_flagged` pass, `HiddenHtml.test_zero_width_and_tags_in_visible_html` pass, `BenignHtml.test_hidden_state_does_not_leak_after_close` pass, `BenignHtml.test_long_hidden_text_is_med` pass, `BenignHtml.test_malformed_html_does_not_crash` pass, `BenignHtml.test_menu_hidden_short_not_high` pass, `BenignHtml.test_title_links_and_images` pass, `Directives.test_hidden_html_directive_without_ai_words` pass, `Directives.test_hidden_html_sentence_is_med_menu_is_not` pass
@@ -238,6 +241,7 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 | 4 | bdo / dir=rtl / bidi override, DOCX rtl, PDF ReversedChars | missed | direction checks (W6) |
 | 4 | payload in tar, tar.gz/bz2/xz, gz/bz2/xz; 7z/rar | not unpacked | archive support (A1); 7z/rar MED |
 | 4 | bits in trailing whitespace | missed | whitespace steganography (T12) |
+| 4 | tag reading order reversed against the drawing order | missed | reading-order check (F6) |
 
 ## Calibration on real files (false alarms removed)
 

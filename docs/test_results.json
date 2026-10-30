@@ -1,8 +1,8 @@
 {
- "version": "1.4.0",
- "date": "2026-10-30 06:25",
- "seconds": 321,
- "total": 319,
+ "version": "1.5.0",
+ "date": "2026-10-30 07:08",
+ "seconds": 308,
+ "total": 321,
  "failures": 0,
  "errors": 0,
  "skipped": 0,
@@ -1694,6 +1694,18 @@
    "subtest": ""
   },
   "test_redteam3.MoreArchives.test_tar_variants": {
+   "status": "pass",
+   "doc": "",
+   "detail": "",
+   "subtest": ""
+  },
+  "test_redteam3.ReadingOrder.test_matching_tags_are_quiet": {
+   "status": "pass",
+   "doc": "",
+   "detail": "",
+   "subtest": ""
+  },
+  "test_redteam3.ReadingOrder.test_reordered_tags": {
    "status": "pass",
    "doc": "",
    "detail": "",
