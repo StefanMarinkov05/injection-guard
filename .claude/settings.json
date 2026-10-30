@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -I plugins/injection-guard/tests/run_tests.py)",
+      "Bash(python3 -I plugins/injection-guard/tests/report.py)",
+      "Bash(git status)",
+      "Bash(git diff)",
+      "Bash(git log)",
+      "Bash(python3 -I plugins/injection-guard/tests/run_tests.py *)",
+      "Bash(python3 -I plugins/injection-guard/tests/report.py *)",
+      "Bash(python3 -I plugins/injection-guard/tests/merge_results.py *)",
+      "Bash(python3 -I docs/gen_docs.py)",
+      "Bash(safe-read *)",
+      "Bash(safe-fetch *)",
+      "Bash(gh run list *)",
+      "Bash(gh run view *)",
+      "Bash(gh run watch *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)"
+    ]
+  }
+}
