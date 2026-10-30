@@ -3,3 +3,4 @@ __pycache__/
 docs/build/*
 !docs/build/mechanisms.pdf
 .DS_Store
+.claude/settings.local.json
