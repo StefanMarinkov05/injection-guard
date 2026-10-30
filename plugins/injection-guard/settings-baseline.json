@@ -1,0 +1,35 @@
+{
+  "_comment": "Suggested hardening for ~/.claude/settings.json - NOT applied automatically. These limit the damage if an injection gets through: no secrets to read, no silent network exfiltration. Merge by hand and adjust the allowlist to your projects.",
+  "permissions": {
+    "deny": [
+      "Read(~/.ssh/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.config/gh/hosts.yml)",
+      "Read(~/.netrc)",
+      "Read(~/.docker/config.json)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/*.pem)",
+      "Read(**/id_rsa*)",
+      "Read(**/id_ed25519*)",
+      "Bash(curl * -d @*)",
+      "Bash(curl * --data-binary @*)",
+      "Bash(curl * -F *@*)",
+      "Bash(scp *)",
+      "Bash(nc *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(gh * create *)",
+      "Bash(gh api * -X POST *)",
+      "Bash(npm publish *)",
+      "Bash(curl * -X POST *)",
+      "Bash(curl * -X PUT *)"
+    ]
+  },
+  "sandbox": {
+    "_comment": "Optional: run Bash in the sandbox with network limited to hosts you need. Check the current Claude Code sandbox documentation for the exact keys before enabling.",
+    "enabled": true
+  }
+}

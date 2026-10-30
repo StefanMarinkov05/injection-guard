@@ -1,0 +1,6 @@
+#!/usr/bin/env -S python3 -I
+"""safe-read - see README.md of the injection-guard plugin."""
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "lib"))
+from guard.scan import main_read
+sys.exit(main_read())

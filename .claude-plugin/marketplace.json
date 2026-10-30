@@ -1,0 +1,13 @@
+{
+  "name": "agent-guard",
+  "owner": { "name": "Stefan" },
+  "metadata": { "description": "Local marketplace for agent-safety plugins. Source: ~/Projects/injection-guard" },
+  "plugins": [
+    {
+      "name": "injection-guard",
+      "source": "./plugins/injection-guard",
+      "description": "Prompt-injection defence for every project: safe-read / safe-fetch sanitisers, read gates and output scanning hooks, a tool-less quarantine reader agent, and the detection procedure as a skill.",
+      "version": "1.4.0"
+    }
+  ]
+}

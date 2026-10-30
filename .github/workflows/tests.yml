@@ -1,0 +1,31 @@
+name: tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  suite:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: System tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-deu mupdf-tools qpdf wamerican fonts-dejavu-core
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python packages
+        run: python -m pip install pillow pypdf fonttools
+      - name: Tool versions
+        run: |
+          pdftotext -v 2>&1 | head -1; tesseract --version | head -1; mutool -v 2>&1 | head -1; python -c "import PIL, pypdf, fontTools; print(PIL.__version__, pypdf.__version__, fontTools.version)"
+      - name: Test suite (with recorded results)
+        run: python -I plugins/injection-guard/tests/report.py
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: docs/test_results.json

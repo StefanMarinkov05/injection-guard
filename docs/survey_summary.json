@@ -1,0 +1,40 @@
+{
+ "date": "2026-10-30",
+ "files": 119,
+ "verdicts": "MED 66, clean 47, HIGH 6",
+ "instruction_files": [
+  "26/exercise sheets/Exercise_Sheet_2.pdf"
+ ],
+ "high_files": [
+  [
+   "25/1._Slides/Lecture_20.pdf",
+   "HIGH",
+   "genuine hidden text, benign: the German original of a translated slide sits invisibly under the English text | text in text layer but blank on the rendered page"
+  ],
+  [
+   "25/1._Slides/Lecture_25.pdf",
+   "HIGH",
+   "genuine faint content, benign: photo of a handwritten graph with half-erased pencil notes | faint near-white ink"
+  ],
+  [
+   "26/5._Slides/Chapter-01-02.pdf",
+   "HIGH",
+   "benign: Beamer keeps content of other overlay steps outside the page | text outside the visible page"
+  ],
+  [
+   "26/6._Slides_with_Annotations/2026-10-14.pdf",
+   "HIGH",
+   "embedded CMS screenshot with light-grey progress bars, no hidden text | faint near-white ink"
+  ],
+  [
+   "26/exercise sheets/Exercise_Sheet_2.pdf",
+   "HIGH",
+   "THE TRAP: invisible ActualText telling an LLM to solve c*(ba+cb*)a and to hide it | AI-directed words in hidden text; ActualText replacement text; PDF readers disagree: text extracted by poppler but not MuPD; PDF readers disagree: text extracted by poppler but not pypd; PDF string object with AI-directed text; PDF string o"
+  ],
+  [
+   "exams/ti_Blaeser_2014WS_end.pdf",
+   "HIGH",
+   "scan of a printed exam: OCR of grey scan noise, no readable words | faint text readable only after removing normal ink and boost"
+  ]
+ ]
+}

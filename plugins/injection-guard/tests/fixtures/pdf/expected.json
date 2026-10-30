@@ -1,0 +1,137 @@
+{
+ "_comment": "Regression baseline for the LaTeX trap corpus (sources in src/). verdict = minimum verdict; kinds = substrings that must appear among finding kinds; hidden = a phrase that must NOT appear in the visible text output. Every PDF in this folder must have an entry.",
+ "01_actualtext.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "ActualText"
+  ],
+  "hidden": "AI language model"
+ },
+ "02_white_text.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "blank on the rendered page"
+  ],
+  "hidden": "language model"
+ },
+ "03_near_white.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "blank on the rendered page",
+   "faint"
+  ],
+  "hidden": "language model"
+ },
+ "04_tiny_font.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "microscopic"
+  ],
+  "hidden": "language model"
+ },
+ "05_render_mode3.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "render mode",
+   "blank on the rendered page"
+  ],
+  "hidden": "language model"
+ },
+ "06_off_page.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "outside the visible page"
+  ],
+  "hidden": "language model"
+ },
+ "07_covered_by_box.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "blank on the rendered page"
+  ],
+  "hidden": "language model"
+ },
+ "08_clipped.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "blank on the rendered page"
+  ],
+  "hidden": "language model"
+ },
+ "09_hidden_layer_ocg.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "optional content layers"
+  ]
+ },
+ "10_annotation.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "annotation /Text"
+  ]
+ },
+ "11_metadata.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "document info field"
+  ]
+ },
+ "12_attachment.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "attachment content"
+  ]
+ },
+ "13_bookmark.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "PDF string object"
+  ]
+ },
+ "14_tounicode_remap.pdf": {
+  "verdict": "MED",
+  "kinds": [
+   "ToUnicode remap"
+  ],
+  "_note": "a single digit remap ('3' drawn, '7' extracted) cannot be confirmed by spelling; MED structurally, the OCR check reports '7' vs '3'"
+ },
+ "15_alt_text.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "Alt text"
+  ]
+ },
+ "16_visible_small_grey.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "faint"
+  ]
+ },
+ "17_clean_control.pdf": {
+  "verdict": "clean",
+  "kinds": []
+ },
+ "18_image_text.pdf": {
+  "verdict": "MED",
+  "kinds": [
+   "embedded image with faint content"
+  ]
+ },
+ "19_zero_width.pdf": {
+  "verdict": "clean",
+  "kinds": [],
+  "_note": "lualatex + DejaVu dropped the zero-width characters while building: the file contains none. Real zero-width PDFs are tested synthetically in test_pdf.py."
+ },
+ "20_homoglyph.pdf": {
+  "verdict": "MED",
+  "kinds": [
+   "mixed-script"
+  ]
+ },
+ "21_tounicode_range.pdf": {
+  "verdict": "HIGH",
+  "kinds": [
+   "ToUnicode remap confirmed"
+  ]
+ }
+}
