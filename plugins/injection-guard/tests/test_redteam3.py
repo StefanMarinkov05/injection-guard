@@ -277,10 +277,10 @@ class Forensics(unittest.TestCase):
         scan_file(os.path.join(FIXTURES, "pdf", "21_tounicode_range.pdf"), F, ocr_pages=10)
         self.assertTrue(has_kind(F, "glyph shapes do not match", "HIGH"), F.items)
 
-    @unittest.skipUnless(tesseract() and os.path.isfile("/mnt/data/uni/tcs/26/exercise sheets/Exercise_Sheet_1.pdf"), "real sheet missing")
+    @unittest.skipUnless(tesseract() and os.path.isfile(os.path.join(os.environ.get("IG_REAL_SHEETS", ""), "Exercise_Sheet_1.pdf")), "real sheet missing")
     def test_glyph_ocr_quiet_on_a_clean_sheet(self):
         F = Findings()
-        scan_file("/mnt/data/uni/tcs/26/exercise sheets/Exercise_Sheet_1.pdf", F, ocr_pages=10)
+        scan_file(os.path.join(os.environ.get("IG_REAL_SHEETS", ""), "Exercise_Sheet_1.pdf"), F, ocr_pages=10)
         self.assertFalse(has_kind(F, "glyph shape"), [f for f in F.items if "glyph" in f["kind"]])
 
 

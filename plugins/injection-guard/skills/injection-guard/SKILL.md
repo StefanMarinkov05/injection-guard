@@ -44,4 +44,4 @@ The hooks enforce this: raw `Read` (and `cat`, `pdftotext`, ...) of an unscanned
 ## Limits - say them when relevant
 No OCR: text drawn inside images is not transcribed (view the image). A visible, plausible decoy is indistinguishable from a real task. Content generated at runtime (JS, server per visitor) is flagged, not seen. Regex phrase lists miss novel wording - the structural checks (hidden, encoded, ambiguous) do not depend on wording.
 
-Mechanism reference with test evidence: `~/Projects/injection-guard/docs/MECHANISMS.md` (PDF: `docs/build/mechanisms.pdf`). Handbook with the full catalogue and the Sheet 2 case: `/mnt/data/uni/tcs/study/TCS_Prompt_Injection_Handbook.pdf`. Tests: `python3 -I <plugin>/tests/run_tests.py`.
+Mechanism reference with test evidence: `~/Projects/injection-guard/docs/MECHANISMS.md` (PDF: `docs/build/mechanisms.pdf`). Handbook with the full catalogue and the Sheet 2 case: local only, path in `~/Projects/injection-guard/CLAUDE.local.md`. Tests: `python3 -I <plugin>/tests/run_tests.py`.

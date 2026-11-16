@@ -6,7 +6,7 @@ from guard.scan import scan_file
 
 CORPUS = os.path.join(FIXTURES, "pdf")
 RANK = {"clean": 0, "MED": 1, "HIGH": 2}
-REAL = os.environ.get("IG_REAL_SHEETS", "/mnt/data/uni/tcs/26/exercise sheets")
+REAL = os.environ.get("IG_REAL_SHEETS", "")  # local course sheets folder; tests skip when unset
 
 
 def scan(path, **kw):

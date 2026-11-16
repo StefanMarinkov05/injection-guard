@@ -59,15 +59,19 @@ finding stays. If not, narrow the rule, add a regression test with the benign ca
 **Release**: bump the version in `.claude-plugin/marketplace.json`, `plugins/injection-guard/.claude-plugin/plugin.json`
 and `VERSION` in `plugins/injection-guard/lib/guard/common.py`; run `report.py`; regenerate docs; remove `__pycache__`;
 `claude plugin marketplace update agent-guard && claude plugin update injection-guard@agent-guard`; commit (no
-trailers) and push; watch CI. Copy `docs/build/mechanisms.pdf` to `/mnt/data/uni/tcs/study/Injection_Guard_Mechanisms.pdf`.
+trailers) and push; watch CI. Copy `docs/build/mechanisms.pdf` to the study folder named in `CLAUDE.local.md`.
 
 ## Calibration files (must stay as listed)
+Real files live outside the repo; their local paths are in `CLAUDE.local.md` (gitignored). Tests that need
+them read `IG_REAL_SHEETS` (folder of the course exercise sheets) and `IG_REAL_TEMPLATE` (a LaTeX paper
+template folder) and skip when unset.
+
 | File | Expected |
 |---|---|
-| `/mnt/data/uni/tcs/26/exercise sheets/Exercise_Sheet_1.pdf`, both tutorial sheets, `26/1._Lecture_Notes/Script.pdf` | clean (INFO only) |
-| `/mnt/data/uni/tcs/26/exercise sheets/Exercise_Sheet_2.pdf` | HIGH - the real trap (ActualText, stream 261, readers disagree) |
-| `/home/azis/Projects/OAS/misc/Autonomous_Offensive_Security_Notes_for_Students.pdf` | HIGH - white-text note to AI on p.3-4 |
-| `/home/azis/Downloads/General/Paper_template/AOS_template/*` | clean |
+| `$IG_REAL_SHEETS/Exercise_Sheet_1.pdf`, both tutorial sheets, the lecture script | clean (INFO only) |
+| `$IG_REAL_SHEETS/Exercise_Sheet_2.pdf` | HIGH - the real trap (ActualText, stream 261, readers disagree) |
+| a course notes PDF (path in `CLAUDE.local.md`) | HIGH - white-text note to AI on p.3-4 |
+| `$IG_REAL_TEMPLATE/*` | clean |
 | all 119 course PDFs: `docs/summarize_survey.py` over a survey log (see `docs/survey_summary.json`) | only Sheet 2 has an AI instruction; 5 benign HIGH files explained in `NOTES` |
 
 ## Gotchas learned the hard way
