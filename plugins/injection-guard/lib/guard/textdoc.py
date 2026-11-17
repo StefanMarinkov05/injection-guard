@@ -1,4 +1,5 @@
 """Plain text / Markdown / JSON / code, and images (metadata + faint content; no OCR)."""
+import html
 import re
 from PIL import Image
 from .common import (DIRECTIVE, IMPERSONATION, KEYWORDS, STRONG, check_text, hidden_instruction, hidden_task_signal, link_problem, short,
@@ -26,7 +27,7 @@ def scan_text(text, F, where="text", markdown=True):
             removed.append(("Markdown reference-link comment (not rendered)", m.group(1)))
         text = MD_REFCOMMENT.sub("", text)
         for m in HIDDEN_TAG.finditer(text):
-            removed.append(("inline HTML hidden by CSS/attribute", m.group(4)))
+            removed.append(("inline HTML hidden by CSS/attribute", html.unescape(m.group(4))))  # Stefan&#x27;s -> Stefan's
         text = HIDDEN_TAG.sub("", text)
         for t in MD_TITLE.findall(text) + MD_REFDEF.findall(text):  # hover-only titles and reference definitions
             t = next((x for x in t if x), "") if isinstance(t, tuple) else t

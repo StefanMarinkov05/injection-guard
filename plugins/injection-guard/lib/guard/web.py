@@ -341,6 +341,8 @@ def sanitize_html(src, F, where="html", depth=0):
     scripts = " ".join(p.hidden.get("<script>", []))
     if scripts:
         js_checks(scripts, F, where)
+        from .vectors import clipboard_check
+        clipboard_check(scripts, "".join(p.out), F, where)
         atob_literals(scripts, F, where)
     total_hidden = 0
     for reason, chunks in p.hidden.items():
@@ -359,6 +361,15 @@ def sanitize_html(src, F, where="html", depth=0):
             check_text(text, f"{where} hidden ({reason})", F, hidden=True)
         elif not soft and (len(text) > 200 or SENTENCE.search(text)) and reason not in ("<meta> content", "<head>", "<noscript>"):
             F.add("MED", f"hidden text ({reason})", where, short(text, 200))
+            from .vectors import steering
+            steering(text[:400_000], f"{where} hidden ({reason})", F, hidden=True)
+        else:  # short hidden text, meta content, alt text: only text addressed to AI or steering a choice ("Skip to content" stays quiet)
+            from .vectors import steering
+            steering(text[:400_000], f"{where} hidden ({reason})", F)
+    for c in p.comments:
+        if not hidden_instruction(c) and len(c) < 400_000:
+            from .vectors import steering
+            steering(c, f"{where} HTML comment", F)  # developers write "skip"/"ignore" in comments; only addressed or steering text counts
     if total_hidden:
         F.add("INFO", "hidden elements removed", where, f"{total_hidden} characters of hidden text, {len(p.hidden)} kind(s)")
     for c in p.comments:

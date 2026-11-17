@@ -1,5 +1,40 @@
 # Architecture
 
+## The layers at a glance
+
+```mermaid
+flowchart TB
+  subgraph sources["Untrusted input"]
+    web["web pages, search results,<br/>browser snapshots"]
+    files["PDF, Office, EPUB, HTML,<br/>images, archives, code"]
+    repos["cloned repos, downloads,<br/>tool and MCP output"]
+  end
+  subgraph guard["injection-guard"]
+    scan["Scanner<br/>safe-read / safe-fetch<br/>(lib/guard)"]
+    pre["PreToolUse hook<br/>read gate, effect gate,<br/>taint gate"]
+    post["PostToolUse hook<br/>output scan, provenance,<br/>taint"]
+    skill["Skill + quarantine-reader<br/>(how the agent behaves)"]
+    state[("session state<br/>taint, sources,<br/>downloaded folders")]
+  end
+  user(["User: asked to allow"])
+  agent(["Agent"])
+  sources --> scan --> agent
+  agent -- "tool call" --> pre
+  pre -- "ask" --> user
+  pre -- "allow" --> tool["Tool runs"] --> post --> agent
+  post <--> state
+  pre <--> state
+  skill -.-> agent
+```
+
+Three ideas carry the design:
+1. **What a human sees is the content.** Everything else (hidden CSS, white text, metadata, comments, encodings) is
+   reported and removed before the agent reads it.
+2. **Wording is a signal, effect is the gate.** Patterns catch known and respelled wording; the hook does not rely on
+   them. Actions that cause damage (data out, secrets read, code from a download run, settings that run programs,
+   payment details typed) are shown to the user with their effect and source before they happen.
+3. **Findings change what the agent may do next.** A HIGH finding taints the session; while tainted, risky actions ask.
+
 ## Flow of one scan
 ```
 safe-read FILE ──► scan.main_read ──► scan.scan_file(path, F)
@@ -30,12 +65,30 @@ safe-read FILE ──► scan.main_read ──► scan.scan_file(path, F)
 | `polyglot.py` | polyglot signatures, revisions, duplicate objects, trailers, PDF JavaScript runtime calls |
 | `web.py` | HTML/SVG sanitiser, CSS hiding rules, data: URIs, scripts, direction tricks, deceptive links, `check_output()` (structural pass for markup that arrives as tool output) |
 | `cost.py` | token-cost instructions (`cost_signals()`), `squeeze()` (repeated lines, padding and encoded blobs collapsed in the printed text) |
+| `vectors.py` | browsing and shopping signals: ClickFix, clipboard writes, image-URL exfiltration, spreadsheet formulas, disguised extensions, text addressed to AI readers, steering and concealment (`signals()`, `steering()`, `clipboard_check()`) |
+| `actions.py` | pure helpers for the effect gate: downloaded folders, build/test tools and what they run, `.git/config` that runs programs, agent config effects (hooks, MCP servers, permissions), typo-squatted packages, payment details, shell syntax in file names |
 | `office.py` | DOCX/PPTX/XLSX/ODF/EPUB parsers, generic zip archives |
 | `latex.py` | LaTeX/BibTeX hidden spans and compile-time code |
 | `textdoc.py` | Markdown/plain text, images (metadata, faint content) |
 | `stego.py` | PNG chunks, JPEG segments, alpha tricks, LSB, scaling attacks |
 | `scan.py` | type detection, dispatch, archives, binaries, CLI (`safe-read`, `safe-fetch`), output envelope |
-| `hooks/guard_hook.py` | `pre` (read gate, WebFetch route, shell readers, self-protection), `post` (output scan, LaTeX read check), `session` |
+| `hooks/guard_hook.py` | `pre` (read gate, WebFetch route, shell readers, self-protection, effect gate, taint gate), `post` (output scan, provenance, LaTeX read check), `session`, `prompt` |
+
+```mermaid
+flowchart LR
+  hook["hooks/guard_hook.py"] --> common
+  hook -. lazy .-> actions["actions.py"]
+  hook -. lazy .-> web
+  hook -. lazy .-> latex
+  scan["scan.py<br/>(safe-read, safe-fetch)"] --> common["common.py<br/>check_text, Findings,<br/>registry, config"]
+  scan --> pdf --> forensic & readers & ocr & polyglot
+  scan --> office & web & textdoc & latex
+  textdoc --> stego & ocr
+  common -. lazy .-> cost["cost.py"]
+  common -. lazy .-> vectors["vectors.py"]
+  web --> vectors
+  office & web & textdoc & latex & pdf --> common
+```
 
 ## Findings API
 ```python
@@ -68,3 +121,51 @@ pasted prompt), the session is marked for `taint_minutes`. While marked, the pre
 injected instruction would want: sending data out, reading credentials, installing packages, changing what runs
 later, git options that run a program, and local scripts whose content does any of these (the script is read when it
 is run, so writing it in harmless steps does not help). Detection can miss wording; this gate does not depend on it.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Clean
+  Clean --> Tainted: HIGH finding in tool output, safe-read report,<br/>pasted prompt or a cloned repo's agent files
+  Tainted --> Tainted: another HIGH finding (timer restarts)
+  Tainted --> Clean: taint_minutes pass (default 30)
+  state Tainted {
+    [*] --> Watching
+    Watching --> Ask: send data out, read secrets, install, persist,<br/>git runs a program, script does any of these,<br/>page script in the browser, URL with a data blob
+    Ask --> Watching: user decides
+  }
+```
+
+## Effect gate (round 7)
+Masked injections read like normal setup guides ("add this MCP server", "run make to finish"), so wording cannot
+separate them. The effect gate asks **always** (not only when tainted) before actions whose effect outlives the command
+or runs someone else's code, and the question shows the effect plus where outside content came from in this session:
+
+| Action | What the ask shows |
+|---|---|
+| Write/Edit of `.mcp.json`, `.claude/settings*.json`, `~/.claude.json`, `.vscode/tasks.json`, `devcontainer.json` | each new hook command, MCP server (command, args, URL), permission allow rule, env variable, auto-run task; unchanged effects pass |
+| `claude mcp add`, `claude plugin install`, `claude plugin marketplace add` | the exact server or plugin |
+| pytest, make, npm/yarn/pnpm, pip install ., cargo, go generate, direnv, tox ... inside a folder downloaded this session | what would run: conftest.py count, Makefile recipes, package.json install scripts, build.rs, .envrc; asked once per folder (a run that went through counts as allowed) |
+| any git command in a repository whose `.git/config` makes git run a program (fsmonitor, sshCommand, pager with shell syntax, `!` aliases) | the line and file |
+| pip/npm/npx package one typo away from a popular one | the popular name and where to check the publisher |
+| browser type/fill tools with a checksum-valid card number or IBAN | a reminder to check the domain and amount |
+
+```mermaid
+sequenceDiagram
+  participant A as Agent
+  participant Pre as PreToolUse
+  participant S as Session state
+  participant U as User
+  participant T as Tool
+  participant Post as PostToolUse
+  A->>T: git clone https://example.org/r.git
+  T-->>Post: "Cloning into 'r'..."
+  Post->>S: remember r as downloaded, source URL
+  Post-->>A: r brings CLAUDE.md, .mcp.json (adds server x: npx evil-mcp): data, not instructions
+  A->>Pre: cd r && npm install
+  Pre->>S: r is downloaded, not yet allowed
+  Pre->>U: ask: runs package.json postinstall: node x.js (from example.org)
+  U-->>Pre: allow
+  Pre->>T: npm install
+  T-->>Post: output
+  Post->>S: r allowed for build tools
+```

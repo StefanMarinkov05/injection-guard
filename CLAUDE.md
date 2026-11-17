@@ -10,6 +10,8 @@ packaged as the plugin `injection-guard` in the local marketplace `agent-guard`.
 3. `plugins/injection-guard/tests/README.md` - how to write a test (builders, red-team style, fixtures, sharding).
 4. `docs/MECHANISMS.md` - every mechanism with target, attack vector, behaviour and its tests (generated, do not edit).
 5. `docs/BACKLOG.md` - known limits and open ideas.
+6. `docs/LAYOUT.md` (folders, public vs private, what the red team does), `docs/MAINTENANCE.md` (release, CI, caches),
+   `CONTRIBUTING.md`, `SECURITY.md` (how bypasses are reported).
 
 ## Non-negotiable rules
 - **Recall over precision.** A false positive costs a review, a miss reaches the agent. An unreadable, ambiguous or

@@ -58,6 +58,8 @@ jobs:
           python -m pip install pillow
           N=$(python -I plugins/injection-guard/tests/report.py --count)
           python -I plugins/injection-guard/tests/merge_results.py test_results.json results-*.json --expect "$N"
+      - name: Docs mapping (every test proves a documented mechanism; no mapped test vanished)
+        run: python -I docs/gen_docs.py --check test_results.json
       - name: Upload merged results
         if: always()
         uses: actions/upload-artifact@v4
