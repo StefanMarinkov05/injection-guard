@@ -4,6 +4,7 @@ Derived from pdf_trapscan.py (TCS project). Needs poppler-utils and Pillow.
 """
 import html, os, re, subprocess, tempfile, unicodedata, zlib
 from PIL import Image, ImageChops, ImageFilter
+from .common import hidden_instruction
 from .common import DIRECTIVE, INVISIBLE, KEYWORDS, STRONG, check_text, decoded_variants, hidden_task_signal, short
 
 CROP = ["-x", "-4000", "-y", "-4000", "-W", "12000", "-H", "12000"]  # pdftotext drops off-page text otherwise
@@ -161,13 +162,13 @@ def structural(data, F, replacements, kw_strings):
         sp = re.sub(r"[_\-]+", " ", nm)
         if sum(c.isascii() and (c.isalnum() or c in " .,:;'") for c in sp) < 0.9 * len(sp):
             continue
-        if STRONG.search(sp) or KEYWORDS.search(sp) or DIRECTIVE.search(sp):
+        if hidden_instruction(sp) or DIRECTIVE.search(sp):
             F.add("HIGH", "PDF name with AI-directed text or a directive", "structure", short(sp, 300))
     comments = [c.decode("latin1") for c in re.findall(rb"(?m)^%(?!PDF-|%EOF)([^\r\n]{8,})", blank)]
     comments = [c for c in comments if sum(ch.isprintable() for ch in c) > 0.9 * len(c)]
     if comments:
         ctext = "\n".join(comments)
-        if STRONG.search(ctext) or KEYWORDS.search(ctext) or DIRECTIVE.search(ctext):
+        if hidden_instruction(ctext) or DIRECTIVE.search(ctext):
             F.add("HIGH", "PDF comment with AI-directed text or a directive (not displayed, read by raw-file readers)", "structure", short(ctext, 300))
             check_text(ctext, "PDF comments", F, hidden=True)
     # raw (not compressed) streams that are not page content: images (JPEG with EXIF/XMP), fonts, embedded files
@@ -232,7 +233,7 @@ def info_and_attachments(path, F):
     if names:
         F.add("MED", "attachment names", "attachments", ", ".join(names))
         spaced = re.sub(r"[_\-.]+", " ", " / ".join(names))
-        if STRONG.search(spaced) or KEYWORDS.search(spaced) or DIRECTIVE.search(spaced) or re.search(r"\b(AI|LLM|KI)\b", spaced) \
+        if hidden_instruction(spaced) or DIRECTIVE.search(spaced) or re.search(r"\b(AI|LLM|KI)\b", spaced) \
                 or re.search(r"(hidden|inject|trap|canary|decoy|llm|gpt|claude|prompt|pdftotext|fingerprint|watermark)", spaced, re.I):
             F.add("HIGH", "attachment name addressed to an AI or with a directive", "attachments", short(spaced, 200))
         with tempfile.TemporaryDirectory() as td:
@@ -402,7 +403,7 @@ def _judge_actualtext(F, visible):
         F.add("INFO", "ActualText that repeats the visible text (accessibility markup)", "structure", f"{same} span(s)")
     if len(odd) > 1:  # an instruction split into many short fragments (one per glyph or word)
         joined = "".join(odd)
-        if STRONG.search(joined) or KEYWORDS.search(joined) or DIRECTIVE.search(joined) or len(joined) > 60:
+        if hidden_instruction(joined) or DIRECTIVE.search(joined) or len(joined) > 60:
             F.add("HIGH", "ActualText fragments that together form a hidden text", "structure", short(joined, 400))
             check_text(joined, "joined ActualText", F, hidden=True)
     return repl
@@ -477,7 +478,7 @@ def scan_pdf(path, F, max_pages=None, image_dir=None, ocr_pages=30, reference=No
         _step(F, "javascript", pdf_javascript, js, F)
         for lit_ in re.findall(r"'([^'\n]{20,})'|\"([^\"\n]{20,})\"", js):
             st = lit_[0] or lit_[1]
-            if STRONG.search(st) or KEYWORDS.search(st) or DIRECTIVE.search(st):
+            if hidden_instruction(st) or DIRECTIVE.search(st):
                 F.add("HIGH", "AI-directed text in PDF JavaScript", "catalog", short(st, 300))
             else:
                 decoded_variants(st, "PDF JavaScript string", F)

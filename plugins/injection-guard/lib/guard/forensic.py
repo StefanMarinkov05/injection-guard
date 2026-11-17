@@ -6,6 +6,7 @@ and whether a glyph's shape is the letter the text layer claims.
 """
 import binascii, html, io, os, re, shutil, subprocess, tempfile, unicodedata
 from collections import Counter
+from .common import hidden_instruction
 from .common import DIRECTIVE, IMPERSONATION, KEYWORDS, STRONG, check_text, hidden_task_signal, short
 
 
@@ -17,7 +18,7 @@ def _exe(name):
 
 def _severity(text):
     t = " ".join(text.split())
-    if IMPERSONATION.search(t) or STRONG.search(t) or KEYWORDS.search(t) or DIRECTIVE.search(t) or hidden_task_signal(t) or len(re.findall(r"\w+", t)) >= 3:
+    if IMPERSONATION.search(t) or hidden_instruction(t) or DIRECTIVE.search(t) or hidden_task_signal(t) or len(re.findall(r"\w+", t)) >= 3:
         return "HIGH"
     return "MED"
 
@@ -139,7 +140,7 @@ def trace_audit(path, F, max_pages=50):
                 continue
             sev = _severity(text)
             t = " ".join(text.split())
-            ai = bool(IMPERSONATION.search(t) or STRONG.search(t) or KEYWORDS.search(t) or DIRECTIVE.search(t))
+            ai = bool(IMPERSONATION.search(t) or hidden_instruction(t) or DIRECTIVE.search(t))
             if kind == "white glyphs" and not ai:
                 sev = "INFO"  # white text on a dark box is normal design; the render diff and cover check decide visibility
             if len(text.strip()) <= 2 and not ai:

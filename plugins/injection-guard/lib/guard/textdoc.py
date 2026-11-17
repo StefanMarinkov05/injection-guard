@@ -1,7 +1,8 @@
 """Plain text / Markdown / JSON / code, and images (metadata + faint content; no OCR)."""
 import re
 from PIL import Image
-from .common import DIRECTIVE, IMPERSONATION, KEYWORDS, STRONG, check_text, hidden_task_signal, short, strip_invisible, whitespace_stego
+from .common import (DIRECTIVE, IMPERSONATION, KEYWORDS, STRONG, check_text, hidden_instruction, hidden_task_signal, link_problem, short,
+                     strip_invisible, whitespace_stego)
 
 MD_COMMENT = re.compile(r"<!--(.*?)-->", re.S)
 MD_REFCOMMENT = re.compile(r"^[ \t]*\[(?://|comment|_)?[^\]]*\]:\s*#\s*[\(\"'](.*?)[\)\"']\s*$", re.M)
@@ -10,6 +11,7 @@ HIDDEN_TAG = re.compile(
     r"|\bhidden\b|aria-hidden\s*=\s*\"true\")[^>]*>(.*?)</\1\s*>", re.S | re.I)
 MD_TITLE = re.compile(r"\]\(\s*<?[^)\s>]+>?\s+\"([^\"]+)\"\s*\)")
 MD_REFDEF = re.compile(r"(?m)^[ \t]*\[[^\]]+\]:\s*<?\S+?>?\s+(?:\"([^\"]+)\"|'([^']+)'|\(([^)]+)\))\s*$")
+MD_LINK = re.compile(r"(?<!!)\[([^\]\n]{3,200})\]\(\s*<?(https?://[^)\s>]{4,2000})")
 MD_IMG = re.compile(r"!\[([^\]]*)\]\(([^)\s]*)(?:\s+\"([^\"]*)\")?\)")
 
 
@@ -32,10 +34,20 @@ def scan_text(text, F, where="text", markdown=True):
                 check_text(t, where + " link title", F, hidden=True)
         for alt, url, title in MD_IMG.findall(text):
             for t in (alt, title or ""):
-                if STRONG.search(t) or KEYWORDS.search(t):
+                if t and hidden_instruction(t):
                     F.add("HIGH", "image alt/title text with AI-directed words", where, short(t, 300))
+        # flagged alt texts and hover titles are not repeated in the output
+        text = MD_IMG.sub(lambda m: "![image](" + m.group(2) + ")" if any(x and hidden_instruction(x) for x in (m.group(1), m.group(3))) else m.group(0), text)
+        text = MD_TITLE.sub(lambda m: m.group(0).replace(m.group(1), "") if hidden_instruction(m.group(1)) else m.group(0), text)
+        for n, (shown, url) in enumerate(MD_LINK.findall(text[:3_000_000])):
+            if n >= 2000:
+                break
+            why = link_problem(shown, url)
+            if why:
+                F.add("MED", "deceptive link (what it shows is not where it goes)", where, short(why, 220))
+                break
     for kind, t in removed:
-        if STRONG.search(t) or KEYWORDS.search(t) or DIRECTIVE.search(t) or hidden_task_signal(t) or IMPERSONATION.search(t):
+        if hidden_instruction(t) or DIRECTIVE.search(t) or hidden_task_signal(t) or IMPERSONATION.search(t):
             F.add("HIGH", kind, where, short(t, 400))
             check_text(t, where + " hidden", F, hidden=True)
         elif t.strip():
@@ -75,7 +87,7 @@ def scan_image(path, F):
     except Exception:
         pass
     for k, v in texts:
-        if STRONG.search(v) or KEYWORDS.search(v):
+        if hidden_instruction(v):
             F.add("HIGH", f"image {k} with AI-directed text (invisible in the picture)", path, short(v, 300))
         check_text(v, f"image {k}", F, hidden=True, keywords=False)
     if texts:

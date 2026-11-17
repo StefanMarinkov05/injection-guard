@@ -5,3 +5,6 @@ docs/build/*
 .DS_Store
 .claude/settings.local.json
 CLAUDE.local.md
+
+# private red-team corpus and evaluation scripts (never published)
+/redteam/

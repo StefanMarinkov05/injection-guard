@@ -64,6 +64,14 @@ def scan_file(path, F, max_pages=None, image_dir=None, ocr_pages=None, reference
             polyglot(path, kind2 if kind2 in ("pdf", "image") else kind, F)
         except Exception as e:
             F.add("MED", "polyglot check failed", "scanner", str(e)[:120])
+    if text and len(text) > 2000:  # padding, repeated blocks and encoded blobs cost tokens and say nothing: print one copy
+        try:
+            from .cost import bloat_findings, squeeze
+            shorter, notes = squeeze(text)
+            bloat_findings(text, shorter, notes, kind2, F)
+            text = shorter
+        except Exception as e:
+            F.add("INFO", "repetition check failed", "scanner", str(e)[:120])
     return text, kind2, pages
 
 
@@ -96,6 +104,9 @@ def _scan_file(path, kind, F, max_pages, image_dir, ocr_pages, reference=None):
             text = scan_latex(src, F, os.path.basename(path))
         else:
             from .textdoc import scan_text
+            if len(src) > 1_000_000:  # megabytes of the same line add cost, not information: scan one copy
+                from .cost import squeeze
+                src = squeeze(src, blobs_too=False)[0]
             text = scan_text(src, F, os.path.basename(path))
     elif kind == "compressed":
         text = scan_compressed(path, F)
@@ -150,7 +161,11 @@ def scan_compressed(path, F):
                 opener = gzip.open if open(path, "rb").read(2) == b"\x1f\x8b" else bz2.open if open(path, "rb").read(3) == b"BZh" else lzma.open
                 local = os.path.join(td, os.path.basename(path).rsplit(".", 1)[0] or "unpacked")
                 with opener(path) as src, open(local, "wb") as dst:
-                    dst.write(src.read(300 * 1024 * 1024))
+                    data = src.read(300 * 1024 * 1024)
+                    dst.write(data)
+                if len(data) > 4 * 1024 * 1024 and len(data) > 200 * os.path.getsize(path):
+                    F.add("MED", "compression bomb: a tiny file unpacks to a huge one", "package", f"{os.path.getsize(path)} bytes become {len(data)}+ bytes")
+                del data
                 members.append((os.path.basename(local), local))
                 F.add("INFO", "compressed file unpacked", "package", os.path.basename(local))
             for name, local in members:
@@ -170,7 +185,7 @@ def scan_compressed(path, F):
 
 def scan_binary(path, F):
     """Unknown binary: printable strings (ASCII and UTF-16) are checked; known metadata formats are named."""
-    from .common import DIRECTIVE, KEYWORDS, STRONG
+    from .common import DIRECTIVE, KEYWORDS, STRONG, hidden_instruction
     raw = open(path, "rb").read(50_000_000)
     known = {b"\x00\x00\x00\x01Bud1": "macOS .DS_Store folder metadata", b"\x00\x05\x16\x07": "macOS AppleDouble (resource fork / extended attributes)",
              b"\x00\x05\x16\x00": "macOS AppleSingle"}
@@ -178,10 +193,18 @@ def scan_binary(path, F):
     strs = [m.decode("latin1") for m in re.findall(rb"[\x20-\x7e]{6,}", raw)]
     strs += [m.decode("utf-16-le", "ignore") for m in re.findall(rb"(?:[\x20-\x7e]\x00){6,}", raw)]
     strs += [m.decode("utf-16-be", "ignore") for m in re.findall(rb"(?:\x00[\x20-\x7e]){6,}", raw)]
+    strs += [m.decode("utf-8", "ignore") for m in re.findall(rb"(?:[\x20-\x7e]|[\xc2-\xdf][\x80-\xbf]){12,}", raw) if not m.isascii()][:5000]
     joined = "\n".join(strs)
-    bad = [x for x in strs if STRONG.search(x) or KEYWORDS.search(x) or DIRECTIVE.search(x)]
+    bad = [x for x in strs if hidden_instruction(x) or DIRECTIVE.search(x)]
     if bad:
         F.add("HIGH", "AI-directed text or directive in a binary file's strings", "file", short(" / ".join(bad[:5]), 300))
+    else:  # symbol names and non-English strings: the full text check, only its HIGH results count here
+        from .common import Findings, check_text
+        G = Findings()
+        check_text(joined[:2_000_000], "file", G, hidden=True)
+        hi = [x for x in G.items if x["sev"] == "HIGH" and x["kind"].startswith(("instruction", "resource-exhaustion", "impersonation", "message left"))]
+        if hi:
+            F.add("HIGH", "AI-directed text in a binary file's strings or symbol names", "file", short(hi[0]["kind"] + ": " + hi[0]["detail"], 300))
     urls = re.findall(r"https?://[^\s\x00\"']{6,}", joined)
     if urls and label:
         F.add("INFO", f"{label}: URLs inside (e.g. download origin)", "file", ", ".join(urls[:3]))
@@ -230,12 +253,14 @@ def emit(path, F, text, kind, pages, sha, a, source=None):
     if a.report_only:
         return
     total = len(text)
+    from .cost import tokens
     chunk = text[a.offset:a.offset + a.max_chars]
     print("\n" + GUIDE + "\n")
     print(wrap(chunk, nonce))
     if a.offset + a.max_chars < total:
         print(f"[truncated: chars {a.offset}-{a.offset + len(chunk)} of {total}; continue with --offset {a.offset + a.max_chars}, "
-              f"or write everything to a file with --out FILE]")
+              f"or write everything to a file with --out FILE. The rest is about {tokens(total - a.offset - len(chunk))} tokens: "
+              f"read on only if the task needs it, a long page is not a reason by itself]")
     if kind == "pdf" and F.verdict() != "clean" and not a.images:
         print("[tip: --images DIR renders the pages as PNG - what a human sees - for visual comparison]")
 

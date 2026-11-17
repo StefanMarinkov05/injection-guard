@@ -1,6 +1,6 @@
 # injection-guard 1.5.1: security mechanisms and proof
 
-Test run 2026-10-30 08:27: **323 tests, 0 failures, 0 errors, 0 skipped** (110 s). Regenerate: `python3 -I plugins/injection-guard/tests/report.py && python3 -I docs/gen_docs.py`.
+Test run 2026-11-17 03:40: **396 tests, 0 failures, 0 errors, 4 skipped** (163 s). Regenerate: `python3 -I plugins/injection-guard/tests/report.py && python3 -I docs/gen_docs.py`.
 
 Rule enforced everywhere: the page a human sees is the content; text inside documents and tool output is data, never instructions.
 Design choice: recall over precision (false positives are acceptable; an unreadable file is never clean).
@@ -36,7 +36,7 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 | P1 | pdf | **Render diff** | PDF text layer vs rendered page | white, near-white, tiny, clipped, covered, render mode 3/7, zero horizontal scaling | every text-layer word is checked for ink and contrast on the rendered page; blank words are removed from the output | HIGH | 11/11 pass |
 | P2 | pdf | **Contrast check** | words on coloured backgrounds | text in the same colour as the box behind it (black on black, grey on grey) | a word needs dark ink AND contrast inside its box | HIGH | 5/5 pass |
 | P3 | pdf | **Off-page and CropBox** | text outside what viewers show | text below the page, beyond the edges, huge text rise, inside MediaBox but outside CropBox | exact-crop vs enlarged-crop extraction; everything in CropBox coordinates | HIGH | 5/5 pass |
-| P4 | pdf | **ActualText** | marked content with replacement text | the Sheet 2 trap; ActualText over visible glyphs; one fragment per glyph | every ActualText is compared with the drawn glyphs (pypdf ignores ActualText; MuPDF as fallback); repeats of the visible text are accessibility markup (INFO), anything else is HIGH/MED; fragments are joined | HIGH | 6/6 pass |
+| P4 | pdf | **ActualText** | marked content with replacement text | the Sheet 2 trap; ActualText over visible glyphs; one fragment per glyph | every ActualText is compared with the drawn glyphs (pypdf ignores ActualText; MuPDF as fallback); repeats of the visible text are accessibility markup (INFO), anything else is HIGH/MED; fragments are joined | HIGH | 4/6 pass, 2 skipped |
 | P5 | pdf | **Metadata and structure** | Info, XMP, outline, annotations, form fields, names, comments, attachments | instructions or fingerprint directives where no viewer shows them | string objects, names (#xx decoded), % comments, attachment names/content, XMP packets | HIGH | 14/14 pass |
 | P6 | pdf | **Font maps** | ToUnicode CMaps | drawn glyph != extracted character (a<->b, 3 vs 7), glyphs mapped to zero-width characters | remaps are confirmed when undoing them turns misspelled text-layer words into real words (HIGH); few unconfirmed remaps MED; many (subset encodings) INFO; invisible targets HIGH | HIGH/MED | 2/2 pass |
 | P7 | pdf | **OCR cross-check** | page image vs text layer (tesseract, dictionaries off) | text layer tells another story: swapped letters/numbers, text drawn as image, faint text, text covered by a textured image | systematic swaps HIGH; single word/number MED; page words missing from the layer; layer words missing from the page; faint-ink OCR | HIGH/MED | 8/8 pass |
@@ -50,7 +50,7 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 | F2 | forensic | **Per-glyph cover check** | glyph cells on the rendered page | part of a word covered (a white box over the c* of the task), text under images, same colour | each drawn glyph's padded cell must contain ink and contrast; covered letters are shown in brackets | HIGH/MED | 1/1 pass |
 | F3 | forensic | **Provenance** | pages with several content streams | a stream appended by another tool after generation (Sheet 2: stream 261, non-embedded Helvetica among embedded Typst fonts); tool-artefact attachment names | streams that use only non-embedded fonts unlike the rest of the page; attachment names like pdftotext-hidden | HIGH/MED | 1/1 pass |
 | F4 | forensic | **Reference diff** | safe-read FILE --reference KNOWN_GOOD.pdf | this week's sheet vs last week's: new fonts, more streams, ActualText, invisible text, attachments, layers, JS, other producer | structural comparison with a trusted earlier document | HIGH/MED | 2/2 pass |
-| F5 | forensic | **Glyph OCR** | embedded fonts (TrueType, CFF incl. CID-keyed, Type1) | a font whose glyph for 'a' draws 'b' (and vice versa) - consistent text layer, different picture | every alphanumeric glyph rendered at its own scale and read by tesseract with confidence; symmetric swaps or several confident mismatches HIGH | HIGH/MED | 2/2 pass |
+| F5 | forensic | **Glyph OCR** | embedded fonts (TrueType, CFF incl. CID-keyed, Type1) | a font whose glyph for 'a' draws 'b' (and vice versa) - consistent text layer, different picture | every alphanumeric glyph rendered at its own scale and read by tesseract with confidence; symmetric swaps or several confident mismatches HIGH | HIGH/MED | 1/2 pass, 1 skipped |
 | F6 | forensic | **Tagged reading order** | tagged PDFs (structure tree) | tags put the marked content in another order than it is drawn - screen readers and tag-aware extractors read e.g. 'c* a(b*c+ab)*' | structure-tree MCID order compared with the content-stream order per page (inversions) | MED | 2/2 pass |
 | P13 | pdf | **Trap corpus baseline** | 21 LaTeX-built trap PDFs (tools/trap_corpus) | every technique of the handbook | pinned verdicts and finding kinds | - | 2/2 pass |
 | W1 | web | **Hidden HTML** | HTML/XHTML/EPUB pages | display:none, visibility, opacity, font-size 0, off-screen, clip, scale(0), transparent, hidden/aria-hidden, CSS classes/ids, noscript, template | hidden elements removed and reported; menus stay quiet, hidden sentences MED | HIGH/MED | 20/20 pass |
@@ -62,7 +62,7 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 | D1 | office | **DOCX** | Word documents | w:vanish, tiny/white runs, tracked deletions, field codes, comments, document variables, custom XML, alt text, macros, AlternateContent fallback | visible text only in the output; everything else reported | HIGH/MED | 19/19 pass |
 | D2 | office | **PPTX** | slide decks | hidden slides, hidden/off-slide/tiny shapes, speaker notes, alt text | same | HIGH | 6/6 pass |
 | D3 | office | **XLSX, ODF, EPUB, zip** | spreadsheets, LibreOffice, e-books, archives | hidden sheets/rows, cell instructions, comments, hidden ODF text, hidden EPUB spans | same | HIGH/MED | 7/7 pass |
-| L1 | latex | **Hidden in LaTeX source** | .tex .sty .cls .bib ... (templates, papers, sheets) | text that never reaches the PDF: comments, \iffalse, comment env, white/phantom/zero-size/tiny/off-page text, ActualText, \pdfinfo/\hypersetup metadata, annotations, raw PDF code, off layers, BibTeX note/abstract fields, \pdfglyphtounicode remaps | AI-directed text HIGH everywhere; directives INFO in comments (author guidance, seen by the editor), MED in typeset-but-invisible text; package code (.cls/.sty) INFO | HIGH/MED/INFO | 18/18 pass |
+| L1 | latex | **Hidden in LaTeX source** | .tex .sty .cls .bib ... (templates, papers, sheets) | text that never reaches the PDF: comments, \iffalse, comment env, white/phantom/zero-size/tiny/off-page text, ActualText, \pdfinfo/\hypersetup metadata, annotations, raw PDF code, off layers, BibTeX note/abstract fields, \pdfglyphtounicode remaps | AI-directed text HIGH everywhere; directives INFO in comments (author guidance, seen by the editor), MED in typeset-but-invisible text; package code (.cls/.sty) INFO | HIGH/MED/INFO | 17/18 pass, 1 skipped |
 | L2 | latex | **Compile-time code** | downloaded templates and packages | \write18, shellesc, \directlua os.execute/io.popen, \input|pipe, \openout, minted/pythontex | reported HIGH (shell) / MED (file writes, packages); compile without -shell-escape | HIGH/MED | 3/3 pass |
 | L3 | hook | **LaTeX read check** | Read of .tex/.sty/.cls/.bib by an agent | agent reads a template whose comments or invisible text address it | PostToolUse runs the LaTeX checks on the file and warns | warn | 2/2 pass |
 | A1 | archive | **Archives and binaries** | zip files, nested zips, macOS metadata (.DS_Store, AppleDouble), unknown binaries | payload inside an archive entry, a Finder comment, path-traversal names | every entry extracted (bounded) and scanned; nested up to depth 2; strings (ASCII/UTF-16) of binaries checked | HIGH/MED/INFO | 10/10 pass |
@@ -72,6 +72,21 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 | I4 | image | **Scaling attack** | images a model downscales | dark pixels exactly at nearest-neighbour sample points | sampled vs averaged downscale, factors 3-8 | MED/HIGH | 2/2 pass |
 | I5 | image | **Text in pictures** | screenshots, scans | an instruction a vision model reads in the picture | OCR transcription (as data) + phrase/directive check + faint-text OCR | HIGH | 1/1 pass |
 | I6 | image | **Polyglot images** | PNG/JPEG with PDF, ZIP or HTML inside | the file is two things at once | signatures at start and inside | HIGH/MED | 3/3 pass |
+| H9 | hook | **Reader gate, second round** | any command that takes a document as an argument; command segments | a reader outside the known list (tac, rev, dd, gs ...) prints the hidden layer | every segment is judged; only commands known not to print content pass | deny | 5/5 pass |
+| H10 | hook | **Session taint and the action gate** | Bash after a HIGH finding entered the context | the injected text was read anyway and now asks for an upload, a secret, an install or a start-up change | after a finding, commands that send data, read credentials, install packages or change what runs later need the user | ask | 11/11 pass |
+| H11 | hook | **Staged actions** | git options that run a program; local scripts; pasted control characters | the harm is split into harmless steps: write a script, then run it; a git option that names a program; bytes that end a paste early | a script is judged by its content when it is run; git -c core.fsmonitor / sshCommand / pager, --upload-pack and ext:: ask; control characters in a prompt are reported | ask | 8/8 pass |
+| H12 | hook | **Tool output and project files** | PostToolUse on every tool; CLAUDE.md, AGENTS.md, memory | an instruction arrives in tool output or sits in a project instruction file | output is checked once per finding; instruction files are checked for invisible text only | context | 10/10 pass |
+| T14 | text | **Natural non-Latin text is quiet** | Cyrillic prose with a few Latin words | false alarm on Bulgarian or Russian text | look-alike checks only fire on words that mix scripts inside Latin text | clean | 4/4 pass |
+| C1 | text | **Token-cost instructions (denial of wallet)** | text that tells an agent to repeat, count, crawl, retry, spawn agents or ignore limits | the page makes the agent burn tokens, time or money | cost phrases count only when the sentence addresses an AI (or is hidden); padding is collapsed in the output | HIGH/MED | 8/8 pass |
+| C2 | text | **Scanner cannot be stalled** | escaped-newline runs, nested hidden elements, long identifier runs | an input built to make one pattern quadratic (a 100k run of \n took 199 s) | anchored and bounded patterns; sanitizer linear in nesting depth; runs of identical sentences scanned once | - | 3/3 pass |
+| T15 | text | **Terminal control sequences** | logs and command output shown in a terminal | bytes that write the clipboard, forge paste markers, conceal text or split an order with colour codes | the text is checked as the terminal would show it; acting sequences are HIGH | HIGH | 4/4 pass |
+| T16 | text | **Respelled orders** | mixed case, look-alike letters, typos, language switching, Pig Latin, hyphens, no word breaks, paraphrase | the order is written so a literal pattern does not see it | the phrase check runs again on normalised copies (one-edit typo repair, trigger words of other languages, separators removed) | HIGH | 2/2 pass |
+| T17 | text | **Staged payloads** | decode-and-follow, assemble-from-pieces, notes for a future agent | the text is harmless until something decodes or assembles it, or until a later session reads it | the asking sentence itself is the finding | HIGH/MED | 4/4 pass |
+| T18 | text | **Orders in identifiers** | variable, function and file names in source code | ignore_all_previous_instructions_and_... as a function name | long snake_case, camelCase and kebab-case names are split into words and checked | HIGH | 2/2 pass |
+| B1 | archive | **Compiled files** | ELF/PE strings, UTF-16 strings, symbol names | the text survives compilation and comes back through strings or a decompiler | ASCII, UTF-8 and UTF-16 strings and symbol names of unknown binaries are checked | HIGH | 4/4 pass |
+| D4 | office | **Visible text of Office files** | DOCX, PPTX, XLSX, ODF body text | an order in plain sight in a Word file passed as clean | the visible text gets the same phrase check as any text file | HIGH | 2/2 pass |
+| W7 | web | **Deceptive links** | link text that names one site and goes to another; user@host trick | the agent follows or recommends a link that is not what it shows | text and target are compared by registered domain | MED | 3/3 pass |
+| O3 | output | **Markup arriving as tool output** | curl, cat or an MCP result that is HTML | text hidden by CSS is plain text to the model | tool output that is markup gets the structural pass; only its HIGH results count | context | 3/3 pass |
 
 ## Tests per mechanism
 
@@ -129,7 +144,7 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 
 **P3 Off-page and CropBox**: `Synthetic.test_off_page_each_side` pass, `InvisibleOnPage.test_outside_cropbox_inside_mediabox` pass, `RotatedPages.test_rotated_clean_page_is_clean` pass, `RotatedPages.test_rotated_page_with_hidden_text` pass, `PdfCarriers2.test_huge_text_rise_off_page` pass
 
-**P4 ActualText**: `Synthetic.test_sheet2_replica` pass, `Synthetic.test_actualtext_over_visible_glyphs` pass, `Synthetic.test_short_actualtext_ligature_is_not_high` pass, `SplitAcrossChannels.test_pdf_actualtext_per_glyph` pass, `RealSheets.test_sheet1_clean` pass, `RealSheets.test_sheet2_trap` pass
+**P4 ActualText**: `Synthetic.test_sheet2_replica` pass, `Synthetic.test_actualtext_over_visible_glyphs` pass, `Synthetic.test_short_actualtext_ligature_is_not_high` pass, `SplitAcrossChannels.test_pdf_actualtext_per_glyph` pass, `RealSheets.test_sheet1_clean` skip, `RealSheets.test_sheet2_trap` skip
 
 **P5 Metadata and structure**: `Synthetic.test_info_dictionary` pass, `Synthetic.test_text_annotation` pass, `Synthetic.test_link_uri` pass, `Synthetic.test_xmp_metadata` pass, `Synthetic.test_hidden_ocg_layer` pass, `MetadataChannels.test_directive_in_info_fields` pass, `MetadataChannels.test_directive_in_xmp` pass, `MetadataChannels.test_directive_in_form_field_tooltip_and_value` pass, `MetadataChannels.test_directive_in_annotation` pass, `MetadataChannels.test_instruction_in_attachment_name` pass, `PdfCarriers2.test_instruction_in_a_pdf_name` pass, `PdfCarriers2.test_instruction_in_pdf_comment` pass, `PdfCarriers2.test_directive_in_pdf_comment` pass, `PdfCarriers2.test_bookmark_with_directive` pass
 
@@ -157,7 +172,7 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 
 **F4 Reference diff**: `Forensics.test_reference_diff` pass, `Forensics.test_reference_diff_of_identical_files_is_quiet` pass
 
-**F5 Glyph OCR**: `Forensics.test_glyph_ocr_catches_the_font_swap` pass, `Forensics.test_glyph_ocr_quiet_on_a_clean_sheet` pass
+**F5 Glyph OCR**: `Forensics.test_glyph_ocr_catches_the_font_swap` pass, `Forensics.test_glyph_ocr_quiet_on_a_clean_sheet` skip
 
 **F6 Tagged reading order**: `ReadingOrder.test_matching_tags_are_quiet` pass, `ReadingOrder.test_reordered_tags` pass
 
@@ -181,7 +196,7 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 
 **D3 XLSX, ODF, EPUB, zip**: `Xlsx.test_hidden_rows` pass, `Xlsx.test_hidden_sheets` pass, `Xlsx.test_instruction_in_cell` pass, `OdfEpubZip.test_epub_hidden_span` pass, `OdfEpubZip.test_odt_annotation` pass, `OdfEpubZip.test_odt_hidden_text` pass, `OdfEpubZip.test_unknown_zip` pass
 
-**L1 Hidden in LaTeX source**: `HiddenInSource.test_comment_directive_is_author_guidance` pass, `HiddenInSource.test_comment_split_over_lines` pass, `HiddenInSource.test_comment_with_ai_instruction` pass, `HiddenInSource.test_directive_in_pdf_metadata_is_med` pass, `HiddenInSource.test_embedded_file` pass, `HiddenInSource.test_escaped_percent_is_not_a_comment` pass, `HiddenInSource.test_glyph_to_unicode_remap` pass, `HiddenInSource.test_iffalse_and_comment_environment` pass, `HiddenInSource.test_kind_is_latex` pass, `HiddenInSource.test_lookalike_and_invisible_in_source` pass, `HiddenInSource.test_pdf_channels` pass, `HiddenInSource.test_phantom_tiny_zero_box_off_page` pass, `HiddenInSource.test_white_text` pass, `Bibtex.test_hidden_bib_fields` pass, `Bibtex.test_normal_bib_is_clean` pass, `PackageCode.test_ai_text_in_package_code_still_high` pass, `PackageCode.test_macro_code_is_info_only` pass, `PackageCode.test_real_template_files_are_clean` pass
+**L1 Hidden in LaTeX source**: `HiddenInSource.test_comment_directive_is_author_guidance` pass, `HiddenInSource.test_comment_split_over_lines` pass, `HiddenInSource.test_comment_with_ai_instruction` pass, `HiddenInSource.test_directive_in_pdf_metadata_is_med` pass, `HiddenInSource.test_embedded_file` pass, `HiddenInSource.test_escaped_percent_is_not_a_comment` pass, `HiddenInSource.test_glyph_to_unicode_remap` pass, `HiddenInSource.test_iffalse_and_comment_environment` pass, `HiddenInSource.test_kind_is_latex` pass, `HiddenInSource.test_lookalike_and_invisible_in_source` pass, `HiddenInSource.test_pdf_channels` pass, `HiddenInSource.test_phantom_tiny_zero_box_off_page` pass, `HiddenInSource.test_white_text` pass, `Bibtex.test_hidden_bib_fields` pass, `Bibtex.test_normal_bib_is_clean` pass, `PackageCode.test_ai_text_in_package_code_still_high` pass, `PackageCode.test_macro_code_is_info_only` pass, `PackageCode.test_real_template_files_are_clean` skip
 
 **L2 Compile-time code**: `CompileTimeCode.test_catcode_in_document` pass, `CompileTimeCode.test_file_writes_and_packages_are_med` pass, `CompileTimeCode.test_shell_and_file_access` pass
 
@@ -200,6 +215,36 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 **I5 Text in pictures**: `OcrChecks.test_image_file_text_is_transcribed_and_checked` pass
 
 **I6 Polyglot images**: `Polyglots.test_png_then_pdf` pass, `Polyglots.test_html_inside_image` pass, `Polyglots.test_pdf_with_zip_appended` pass
+
+**H9 Reader gate, second round**: `ReaderGate.test_commands_that_do_not_print_content_pass` pass, `ReaderGate.test_globs_and_variables_are_resolved` pass, `ReaderGate.test_output_targets_are_not_reads` pass, `ReaderGate.test_readers_outside_the_old_list_are_gated` pass, `ReaderGate.test_safe_read_anywhere_in_a_chain_passes_but_other_segments_stay_gated` pass
+
+**H10 Session taint and the action gate**: `Taint.test_a_clean_safe_read_report_does_not_taint_but_a_high_one_does` pass, `Taint.test_no_finding_no_gate` pass, `Taint.test_ordinary_commands_pass_after_a_finding` pass, `Taint.test_reading_a_secret_without_network_is_quiet_before_any_finding` pass, `Taint.test_risky_commands_ask_after_a_finding` pass, `Taint.test_secret_plus_network_and_pipe_to_shell_always_ask` pass, `Taint.test_taint_is_per_session_and_expires` pass, `Taint.test_web_tool_with_data_in_the_url_asks_after_a_finding` pass, `Persistence.test_any_write_to_a_persistence_file_asks_after_a_finding` pass, `Persistence.test_injected_content_into_instruction_files_asks` pass, `Persistence.test_ordinary_content_passes` pass
+
+**H11 Staged actions**: `StagedActions.test_a_script_is_judged_by_what_it_contains` pass, `StagedActions.test_control_characters_in_a_pasted_prompt` pass, `StagedActions.test_git_options_that_run_a_program_ask_after_a_finding` pass, `StagedActions.test_ordinary_git_options_pass_after_a_finding` pass, `StagedActions.test_ordinary_prompts_are_quiet` pass, `StagedActions.test_scripts_are_not_judged_before_any_finding` pass, `PastedPrompt.test_invisible_text_in_a_pasted_prompt_is_reported` pass, `PastedPrompt.test_ordinary_prompts_stay_quiet` pass
+
+**H12 Tool output and project files**: `PostScan.test_chained_safe_read_output_is_not_impersonation` pass, `PostScan.test_guard_repository_output_is_one_short_note_and_does_not_taint` pass, `PostScan.test_no_session_id_means_no_dedupe` pass, `PostScan.test_repeated_finding_is_reported_once_per_session` pass, `PostScan.test_text_inside_an_image_is_read_before_the_model_sees_it` pass, `PostScan.test_the_models_own_writes_are_not_scanned` pass, `PostScan.test_tools_outside_the_old_matcher_are_scanned` pass, `ProjectFiles.test_ai_directed_html_comment_in_a_command_file` pass, `ProjectFiles.test_clean_project_gets_only_the_notice` pass, `ProjectFiles.test_hidden_text_in_project_instruction_files_is_reported_at_session_start` pass
+
+**T14 Natural non-Latin text is quiet**: `NaturalCyrillic.test_homoglyphs_are_still_caught` pass, `NaturalCyrillic.test_real_words_next_to_latin_are_quiet` pass, `Phrases.test_benign_twins_stay_quiet` pass, `Phrases.test_new_wordings_are_caught` pass
+
+**C1 Token-cost instructions (denial of wallet)**: `Cost.test_an_order_inside_padding_is_still_found` pass, `Cost.test_cost_instructions_are_flagged` pass, `Cost.test_dedupe_keeps_text_without_runs` pass, `Cost.test_distinct_lines_are_kept` pass, `Cost.test_hidden_cost_instruction_is_high` pass, `Cost.test_padding_is_collapsed_in_the_output` pass, `Cost.test_programming_text_is_quiet` pass, `Cost.test_repeated_padding_is_scanned_fast` pass
+
+**C2 Scanner cannot be stalled**: `ScannerCost.test_an_escaped_line_break_does_not_hide_the_word_boundary` pass, `ScannerCost.test_markup_inputs` pass, `ScannerCost.test_text_inputs` pass
+
+**T15 Terminal control sequences**: `Terminal.test_colour_codes_splitting_an_order` pass, `Terminal.test_coloured_build_log_is_quiet` pass, `Terminal.test_concealed_text` pass, `Terminal.test_control_sequences_that_act` pass
+
+**T16 Respelled orders**: `Respelled.test_ordinary_mixed_text_is_quiet` pass, `Respelled.test_respelled_orders_are_high` pass
+
+**T17 Staged payloads**: `Staged.test_assemble_from_pieces` pass, `Staged.test_decode_and_follow` pass, `Staged.test_note_for_a_future_agent` pass, `Staged.test_ordinary_decoding_talk_is_quiet` pass
+
+**T18 Orders in identifiers**: `Identifiers.test_orders_spelled_as_identifiers` pass, `Identifiers.test_ordinary_identifiers_are_quiet` pass
+
+**B1 Compiled files**: `Compiled.test_plain_binary_is_not_high` pass, `Compiled.test_string_in_a_binary` pass, `Compiled.test_symbol_name_in_a_binary` pass, `Compiled.test_utf16_string_in_a_binary` pass
+
+**D4 Visible text of Office files**: `Office.test_plain_docx_is_quiet` pass, `Office.test_visible_order_in_a_docx_is_found` pass
+
+**W7 Deceptive links**: `Links.test_honest_links_are_quiet` pass, `Links.test_link_text_names_another_site` pass, `Links.test_userinfo_trick` pass
+
+**O3 Markup arriving as tool output**: `ToolOutput.test_hidden_text_in_markup_output` pass, `ToolOutput.test_ordinary_markup_output_is_quiet` pass, `ToolOutput.test_plain_output_is_quiet` pass
 
 ## Red-team log
 
@@ -246,11 +291,20 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 | 4 | bits in trailing whitespace | missed | whitespace steganography (T12) |
 | 4 | tag reading order reversed against the drawing order | missed | reading-order check (F6) |
 | 5 | 100k-letter word / 100k newlines / long %xx run (scanner DoS) | 247 s / 70 s / 6 s per scan | linear patterns (T13); CI 8 min -> 4 parallel shards |
+| 6 | private corpus: 21 payloads x 100 carriers (2,800 files) | baseline: cost payloads, visible Office text, terminal tricks, links, staged text missed | C1, D4, T15-T18, W7, O3: 99.5% handled, 42/42 harmless twins quiet |
+| 6 | 100k escaped newlines; 20k nested hidden elements (found while testing the new checks) | 199 s; quadratic | C2 |
+| 6 | typos, language switch mid-sentence, Pig Latin, paraphrase, identifiers, binary symbols | clean | T16, T18, B1 |
 
 ## Calibration on real files (false alarms removed)
 
 | Cause | Symptom | Fix |
 |---|---|---|
+| detekt.yml rule names (AnnotationOnSeparateLine ...) | identifier check HIGH via a 'hidden directive' sub-finding | identifier findings count only when the words form an order |
+| 'today' in ordinary prose | Pig Latin decoder ran on every text (3 extra passes) | needs five distinct -ay words and a third of all words |
+| a path containing .ssh | counted as network use | ssh/nc only as a command word |
+| github.com/.../injection-guard in a CV | impersonation of the guard | the name must not follow a URL or path character |
+| programming exercises (print 50,000 lines, crawl every link) | would be token-cost attacks | cost phrases need an AI addressed nearby, or hidden text |
+| hidden navigation menus in a project's own HTML | would be MED on every Read | tool-output markup pass adds HIGH results only |
 | Typst math fonts have two glyphs for some digits | duplicate-glyph check MED on every sheet | INFO; OCR is the real test |
 | MuPDF glues math letters to words (x contains / xcontains) | reader comparison MED on Sheet 1 | spacing-insensitive, dictionary words only |
 | thresholded OCR of anti-aliased edges | garbage 'faint text' on clean pages | erase normal ink and its halo first |

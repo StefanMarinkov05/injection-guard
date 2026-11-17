@@ -131,7 +131,7 @@ IMPERSONATION = re.compile(
     r"|<\s*/?\s*(user|assistant|human|system|developer|operator)(_message)?\s*>"
     r"|(^|\n)[ \t]*(System|Developer|Operator) (message|prompt|note|instruction)s?\s*:"
     r"|\b(message|note|instructions?|update|notice) from (anthropic|openai|the claude( code)? team|your (operator|developer|administrator|admin|owner))\b"
-    r"|===\s*injection-guard|\bVERDICT:\s*(clean|HIGH|MED)\b|<<<\s*(END\s+)?UNTRUSTED CONTENT|\binjection-guard\s*(\d|:|\(|says|reports|verdict)"
+    r"|===\s*injection-guard|\bVERDICT:\s*(clean|HIGH|MED)\b|<<<\s*(END\s+)?UNTRUSTED CONTENT|(?<![/\w.@-])injection-guard\s*(\d|:|\(|says|reports|verdict)"
     r"|\b(the )?user (has|had) (already )?(explicitly )?(approved|confirmed|authori[sz]ed|agreed|consented)\b"
     r"|\bas (you|we) (agreed|discussed|confirmed|decided) (earlier|before|previously|above)"
     r"|\byou (have )?(already )?(agreed|promised|confirmed) (to|that)\b"
@@ -259,10 +259,377 @@ def natural_script(clean, i):
     return bool((prev and _native(prev[-1])) or (nxt and _native(nxt[0])))
 
 
+# ---------------------------------------------------------------- Nov 2026: web adversaries, terminal tricks, agent-addressed text
+_STRONG_EXTRA3 = (
+    r"\b(append|add|attach|include|put|encode|embed|send|post|upload|submit|paste)\b (it|them|(its|their) (contents?|output|value|text|data)"
+    r"|the (contents?|conversation|chat history|system prompt|api keys?|secrets?|credentials|environment variables|private key)( of [^.\n]{0,40})?)"
+    r"[^.\n]{0,30}\b(to|in|into|at|onto)\b[^.\n]{0,20}https?://"
+    r"|(~/\.ssh/|\bid_rsa\b|\bid_ed25519\b(?!\.pub)|\.aws/credentials|\.netrc\b)[^\n]{0,140}"
+    r"\b(append|send|post|upload|submit|attach|include|encode|embed|paste|add)\b[^\n]{0,80}(https?://|\b(url|link|image|server|webhook)\b)"
+)
+_STRONG_EXTRA4 = (  # staged payloads: the text is harmless until someone decodes or assembles it
+    r"\b(decode|decrypt|deobfuscate|unscramble|decipher|un-?rot13|base64[- ]decode|reverse)\b[^.\n]{0,80}\b(and|then)\b,? (then )?"
+    r"(follow|obey|execute|carry out|act on|apply|comply with|do what)\b[^.\n]{0,30}"
+    r"\b(it|them|its|the (instructions?|steps|commands?|message|result|output|text)|what (it|they) says?|says)\b"
+    r"|\b(combine|concatenate|join|assemble|put together|take|read|collect)\b[^.\n]{0,40}\b(first|last|initial|capital|bold(ed)?|every (second|third|\w+th)) "
+    r"(letters?|words?|characters?)\b[^.\n]{0,80}\b(instructions?|command|next step|what to do|your task)\b"
+    r"|\b(the )?(following|next|above|previous|these) (parts?|pieces|fragments|chunks) (together )?(form|make up|contain|are|spell) "
+    r"(the |your )?(real |actual |new |full )?(instructions?|task|command)\b"
+)
+_STRONG_EXTRA5 = (  # the same order without the usual verbs
+    r"\bpay no (mind|attention|heed) to (whatever|anything|everything|what|all|the|any)\b[^.\n]{0,40}\b(told|instructed|said|instructions?|rules|asked)\b"
+    r"|\bfrom (here|now) on,? your (sole|only|one|real|new|true) (job|task|purpose|goal|duty|function) is\b"
+    r"|\b(set aside|throw away|drop|discard|scrap|abandon) (all |any |every )?(of )?(your |the )?(earlier|previous|prior|preceding|original|existing) "
+    r"(instructions?|guidance|rules|directions|orders|briefing)\b"
+)
+_EXTRA_RX = re.compile(_STRONG_EXTRA3 + "|" + _STRONG_EXTRA4 + "|" + _STRONG_EXTRA5, re.I)
+_EXTRA_NEEDLES = ("contents", "ssh", "decode", "decrypt", "deobfuscate", "unscramble", "decipher", "rot13", "reverse", "combine", "concatenate", "join",
+                  "assemble", "put together", "letters", "words", "characters", "parts", "pieces", "fragments", "chunks", "pay no", "from here on",
+                  "from now on", "set aside", "throw away", "drop", "discard", "scrap", "abandon")
+
+
+class _Phrases:
+    """The phrase list in two halves: the long-standing pattern, and the newer phrases, which only run when one of their
+    literal words is in the text at all (a substring test costs almost nothing; a second full regex pass over megabytes does)."""
+
+    def __init__(self, base, extra, needles):
+        self.base, self.extra, self.needles = base, extra, needles
+        self.pattern = base.pattern + "|" + extra.pattern
+
+    def _need(self, t):
+        low = t.lower()
+        return any(n in low for n in self.needles)
+
+    def search(self, t, *a):
+        if a:
+            t = t[a[0]:a[1]] if len(a) > 1 else t[a[0]:]
+        m = self.base.search(t)
+        if m is None and self._need(t):
+            m = self.extra.search(t)
+        return m
+
+    def finditer(self, t):
+        yield from self.base.finditer(t)
+        if self._need(t):
+            yield from self.extra.finditer(t)
+
+    def findall(self, t):
+        return [m.group(0) for m in self.finditer(t)]
+
+    def sub(self, repl, t):
+        t = self.base.sub(repl, t)
+        return self.extra.sub(repl, t) if self._need(t) else t
+
+
+STRONG = _Phrases(STRONG, _EXTRA_RX, _EXTRA_NEEDLES)
+FUTURE_RX = re.compile(r"\b(note|message|instructions?|reminder|memo|hint) (to|for) (the |any |all )?(next|future|later|subsequent|following) "
+                       r"(agents?|assistants?|AIs?|models?|sessions?|instances?|Claude|LLMs?)\b"
+                       r"|\b(when|if) (a|the|any) (future|next|later|new) (agent|assistant|session|AI|model|instance) (reads?|sees?|opens?|loads?|finds?) this\b", re.I)
+TERM_DANGER = re.compile(r"\x1b\]52;|\x1b\[20[01]~|\x1b\[21t|\x1bP\$q|\x1b\[\?2004[hl]")
+ONE_LINE_CHAT = re.compile(r"(?:^|[\s\"'>])Human\s?:\s[^\n]{3,300}?\bAssistant\s?:")
+_ESC_NL = re.compile(r"(?<!\\[nrt])(?:\\[nrt])++(?=[A-Z\"'\[<(#*\u0400-\u04ff-])")
+_IDENT = re.compile(r"(?<![^\W_])[^\W_]++(?:_[^\W_]++){3,}|(?<![^\W\d_])[A-Z\u0410-\u042f]?[^\W\d_A-Z]++(?:[A-Z\u0410-\u042f]++[^\W_A-Z]*+){3,}|(?<![\w-])[^\W\d_]++(?:-[^\W\d_]++){3,}")
+_IDENT_CAND = re.compile(r"[\w-]{14,400}")
+_CAMEL_CUT = re.compile(r"(?<=[a-z\u0430-\u044f0-9])(?=[A-Z\u0410-\u042f])|(?<=[A-Z])(?=[A-Z][a-z])|[_-]+")
+_COMPACT = re.compile(r"(ignore|disregard|forget|override)(all|any|every|the|your|of)*(previous|prior|above|earlier|preceding)(instructions?|prompts?|rules|directions|guidelines)")
+ESC_U = re.compile(r"\\u([0-9a-fA-F]{4})")
+PERSIST_RX = re.compile(
+    r"\b(add|append|write|insert|save|put|store|record|remember)\b[^.\n]{0,90}\b(to|in|into)\b (your |the |its )?"
+    r"(CLAUDE\.md|AGENTS\.md|GEMINI\.md|MEMORY\.md|\.cursorrules|\.mcp\.json|(your|its) (permanent |long-term |persistent )?"
+    r"(memory|instructions|rules|system prompt)|memory file)"
+    r"|\bso (that )?(later|future|all|subsequent|other) (sessions|conversations|runs|agents) (follow|obey|use|see|trust)\b", re.I)
+_AGENT_NOUN = (r"(?:AIs?|LLMs?|(?:AI|LLM|coding|code|autonomous|automated)[ -](?:agents?|assistants?|models?|tools?|crawlers?|bots?)"
+               r"|language models?|chatbots?|Claude(?: Code)?|ChatGPT|Copilot|Cursor|Gemini|Codex|agents|assistants)")
+AGENT_HEAD = re.compile(
+    r"^[ \t#>*_=\-]{0,10}(?:(?:special |important |hidden |extra )?(?:notes?|instructions?|guidance|guidelines|rules|message|information|hints?|tips"
+    r"|context|prompt|section)[ \t]+)?(?:for|to)[ \t]+(?:all |any |the |every )?" + _AGENT_NOUN + r"[ \t]*[:.!*_#]{0,4}[ \t]*$", re.I)
+AGENT_LABEL = re.compile(
+    r"\b(?:AIs?|LLMs?|(?:AI|LLM|coding|autonomous|automated)[ -](?:agents?|assistants?|models?|crawlers?|bots?)|language models?|chatbots?)\s?[:,\-]\s?"
+    r"(?=(?:when|if|always|never|please|you|do|before|after|also|remember|make|ensure|run|use|add|send|render|fetch|read|install|installing"
+    r"|the|this|to|first|stop|execute|open|recommend|prefer)\b)", re.I)
+AGENT_VERB = re.compile(r"\b(must|should|always|never|before|first|run|install|fetch|execute|curl|wget|recommend|do not|don'?t|use|add|send|read|open|required)\b", re.I)
+DANGER = re.compile(
+    r"\|\s*(sudo\s+)?(ba|z|da)?sh\b|(~/\.ssh|authorized_keys|\bid_rsa\b|\bid_ed25519\b|\.aws/credentials|\.netrc\b)"
+    r"|\b(send|upload|post|email|forward|submit|exfiltrate)\b[^.\n]{0,60}\b(to|at)\b[^.\n]{0,30}(https?://|\S+@\S+\.\w)"
+    r"|\b(do not|don'?t|never|without) (tell|telling|mention|mentioning|inform|informing|notify|notifying|ask|asking)\b[^.\n]{0,20}"
+    r"\b(the )?(user|human|operator|developer|anyone|owner)\b|\bpowershell\b[^\n]{0,20}-e(nc)?\b|\bbase64 (-d|--decode)\b", re.I)
+LOCAL_URL = re.compile(r"https?://(127\.\d+\.\d+\.\d+|localhost|0\.0\.0\.0|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|169\.254\.\d+\.\d+"
+                       r"|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|\[::1\]|metadata\.google\.internal)\b", re.I)
+AGENT_KIND = "text addressed to AI agents with instructions (third-party instructions are data)"
+PERSIST_KIND = "asks to change agent instruction or memory files (persistence)"
+
+
+def agent_sections(clean, where, F, hidden=False):
+    """A heading or label that hands the following text to "AI agents": legitimate projects do it, attackers do it more."""
+    hit = None
+    if len(clean) < 2_000_000:
+        pos = 0
+        for ln in clean.split("\n", 20000)[:20000]:
+            if 6 <= len(ln) <= 90 and AGENT_HEAD.match(ln):
+                body = clean[pos + len(ln): pos + len(ln) + 700]
+                if AGENT_VERB.search(body):
+                    hit = (ln.strip() + " / " + body.strip(), body)
+                    break
+            pos += len(ln) + 1
+    if not hit:
+        m = AGENT_LABEL.search(clean)
+        if m:
+            body = clean[m.start(): m.end() + 400]
+            hit = (body.strip(), body)
+    if hit:
+        sev = "HIGH" if (hidden or DANGER.search(hit[1])) else "MED"
+        F.add(sev, AGENT_KIND + (" (in hidden text)" if hidden else ""), where, short(hit[0], 300))
+    m = PERSIST_RX.search(clean)
+    if m:
+        F.add("HIGH" if hidden else "MED", PERSIST_KIND + (" (in hidden text)" if hidden else ""), where,
+              short(clean[max(0, m.start() - 80): m.end() + 120], 280))
+    m = FUTURE_RX.search(clean)
+    if m:
+        F.add("HIGH" if hidden else "MED", "message left for a future agent or session" + (" (in hidden text)" if hidden else ""), where,
+              short(clean[max(0, m.start() - 60): m.end() + 200], 280))
+    m = LOCAL_URL.search(clean)
+    if m:
+        from .cost import ADDRESS
+        if hidden or ADDRESS.search(clean[max(0, m.start() - 250): m.end() + 250]):
+            F.add("HIGH" if hidden else "MED", "an AI is pointed at a local or internal address (it can reach what the web cannot)", where,
+                  short(clean[max(0, m.start() - 100): m.end() + 100], 260))
+
+
+def hidden_instruction(t):
+    """True if text that no human sees reads like an instruction to an agent."""
+    if "\\u" in t:
+        t = ESC_U.sub(lambda m: chr(int(m.group(1), 16)) if not 0xD800 <= int(m.group(1), 16) <= 0xDFFF else "?", t)
+    if STRONG.search(t) or KEYWORDS.search(t) or IMPERSONATION.search(t) or PERSIST_RX.search(t) or ONE_LINE_CHAT.search(t) or FUTURE_RX.search(t):
+        return True
+    if "\\n" in t and CHAT_RX.search(t.replace("\\n", "\n")):  # a fake conversation turn inside a JSON or script string
+        return True
+    from .cost import cost_signals
+    G = Findings()
+    cost_signals(re.sub(r"\s+", " ", t[:200_000]), "", G, hidden=True)
+    return bool(G.items)
+
+
+# --- links: what the reader sees is not where it goes
+_HOST_RX = re.compile(r"\b((?:[a-z0-9-]+\.)+[a-z]{2,})\b", re.I)
+REDIRECTORS = {"t.co", "bit.ly", "lnkd.in", "goo.gl", "tinyurl.com", "ow.ly", "buff.ly", "youtu.be", "l.facebook.com", "href.li", "is.gd",
+               "rb.gy", "aka.ms", "amzn.to", "redd.it", "fb.me", "dub.sh", "t.ly", "shorturl.at", "web.archive.org", "archive.org"}
+BRANDS = {"github", "google", "paypal", "microsoft", "apple", "amazon", "anthropic", "claude", "openai", "npmjs", "pypi", "gitlab", "linkedin",
+          "facebook", "instagram", "twitter", "netflix", "dropbox", "docker", "stackoverflow", "cloudflare", "binance", "coinbase", "steam"}
+_TLD2 = {"co.uk", "com.au", "co.jp", "com.br", "co.in", "org.uk", "ac.uk", "com.tr", "co.za", "com.cn"}
+
+
+def _site(host):
+    host = host.lower().strip(".")
+    if host.startswith("www."):
+        host = host[4:]
+    parts = host.split(".")
+    n = 3 if ".".join(parts[-2:]) in _TLD2 else 2
+    return ".".join(parts[-n:])
+
+
+def link_problem(text, href):
+    """Why a link is deceptive (shown site differs from target, user-part trick, look-alike domain), or None."""
+    from urllib.parse import urlsplit, unquote
+    try:
+        u = urlsplit(href.strip())
+    except Exception:
+        return None
+    if u.scheme not in ("http", "https") or not u.hostname:
+        return None
+    host = u.hostname.lower()
+    if u.username and "." in u.username:
+        return f"the part before @ ({u.username}) looks like a site, the real target is {host}"
+    labels = []
+    for lab in host.split("."):
+        if lab.startswith("xn--"):
+            try:
+                lab = lab.encode("ascii").decode("idna")
+            except Exception:
+                return f"undecodable internationalised domain {host}"
+        labels.append(lab)
+    for lab in labels:
+        if lab.isascii():
+            continue
+        folded = unicodedata.normalize("NFKD", lab.translate(CONFUSABLE)).encode("ascii", "ignore").decode().lower()
+        if mixed_script(lab) or (any(c in LOOKALIKE or c in GREEK_LOOKALIKE for c in lab) and lab.translate(CONFUSABLE).isascii()):
+            return f"look-alike domain: {'.'.join(labels)} uses letters from another alphabet"
+        for b in BRANDS:
+            if folded == b or (len(folded) == len(b) + 0 and sum(1 for x, y in zip(folded, b) if x != y) <= 1 and len(b) >= 5):
+                return f"look-alike domain: {'.'.join(labels)} imitates {b}"
+        if len(folded) >= 4:
+            for b in BRANDS:
+                if len(b) >= 5 and abs(len(folded) - len(b)) <= 1 and (folded in b or b in folded or folded.replace(b[:3], "") == b[3:]):
+                    return f"look-alike domain: {'.'.join(labels)} imitates {b}"
+    site = _site(host)
+    if site in REDIRECTORS or host in REDIRECTORS:
+        return None
+    q = unquote(u.query + " " + u.path).lower()
+    for m in _HOST_RX.finditer(text[:300]):
+        shown = m.group(1).lower()
+        if "." + shown.rsplit(".", 1)[-1] in (".md", ".py", ".js", ".txt", ".html", ".json", ".pdf", ".sh", ".yml", ".yaml", ".toml", ".png", ".jpg", ".zip", ".exe", ".ts", ".rs", ".go", ".cs"):
+            continue  # a file name, not a site
+        if _site(shown) != site and _site(shown) not in q:
+            return f"the link shows {shown} but goes to {host}"
+        break
+    return None
+
+
+# --- terminal: what a terminal shows is not what the bytes say
+ANSI_RX = re.compile(r"\x1b\[[0-9;:?<=>]*[ -/]*[@-~]|\x1b\][^\x07\x1b\n]{0,4000}(?:\x07|\x1b\\)|\x1b[@-Z\\^_]")
+_SGR = re.compile(r"\x1b\[([0-9;]*)m")
+_OSC8 = re.compile(r"\x1b\]8;[^;\x07\x1b\n]{0,200};([^\x07\x1b\n]{1,2000})(?:\x07|\x1b\\)([^\x1b\n]{1,300})\x1b\]8;;")
+_OVER = re.compile(r"\r(?!\n)|\x1b\[[0-2]?K|\x1b\[\d*G|\x1b\[\d*A")
+_ERASED = re.compile(r"[^\x08]\x08")
+_MIDWORD = re.compile(r"[A-Za-z\u0400-\u04ff]\x1b\[[0-9;]*m[A-Za-z\u0400-\u04ff]")
+_CTRL = re.compile(r"[\x00-\x07\x0e-\x1a\x1c-\x1f\x7f]|\x1b")
+
+
+def _sgr_hidden_split(text):
+    """Split text into (visible, [segments hidden by conceal or by foreground == background])."""
+    vis, hid, pos = [], [], 0
+    conceal, fg, bg = False, None, None
+    for m in _SGR.finditer(text):
+        seg = text[pos:m.start()]
+        (hid if (conceal or (fg is not None and fg == bg)) else vis).append(seg)
+        pos = m.end()
+        ps = [int(p) if p.isdigit() else 0 for p in m.group(1).split(";")] if m.group(1) else [0]
+        i = 0
+        while i < len(ps):
+            c = ps[i]
+            if c == 0:
+                conceal, fg, bg = False, None, None
+            elif c == 8:
+                conceal = True
+            elif c == 28:
+                conceal = False
+            elif 30 <= c <= 37 or 90 <= c <= 97:
+                fg = c
+            elif c == 39:
+                fg = None
+            elif 40 <= c <= 47 or 100 <= c <= 107:
+                bg = c - 10
+            elif c == 49:
+                bg = None
+            elif c in (38, 48) and i + 1 < len(ps):
+                n = 4 if ps[i + 1] == 2 else 2
+                val = ("x",) + tuple(ps[i + 1:i + 1 + n])
+                if c == 38:
+                    fg = val
+                else:
+                    bg = val
+                i += n
+            i += 1
+    seg = text[pos:]
+    (hid if (conceal or (fg is not None and fg == bg)) else vis).append(seg)
+    return "".join(vis), [h for h in hid if h.strip()]
+
+
+def terminal_view(text):
+    """(text as a terminal shows it without escape codes, concealed segments, overwritten segments, erased text, [(url, shown)])."""
+    if "\x1b" not in text and "\r" not in text and "\x08" not in text:
+        return text, [], [], "", []
+    links = [(m.group(1), m.group(2)) for m in _OSC8.finditer(text)] if "\x1b]8;" in text else []
+    concealed = []
+    if "\x1b[" in text:
+        text, concealed = _sgr_hidden_split(text)
+    over = []
+    if "\r" in text and "\n" not in text.replace("\r\n", ""):
+        text = text.replace("\r\n", "\n").replace("\r", "\n")  # old Mac line ends, not overwriting
+    if "\r" in text or "\x1b[" in text:
+        out = []
+        for ln in text.split("\n"):
+            if ("\r" in ln and not ln.endswith("\r")) or "\x1b[" in ln or ln.count("\r") > 1:
+                parts = _OVER.split(ln[:-1] if ln.endswith("\r") else ln)
+                over.extend(p for p in parts[:-1] if len(p.strip()) >= 12)
+                ln = parts[-1]
+            out.append(ln)
+        text = "\n".join(out)
+    erased = ""
+    if "\x08" in text:
+        erased = "".join(m.group(0)[0] for m in _ERASED.finditer(text.replace("\x08 \x08", "\x08")))
+        for _ in range(4):
+            if "\x08" not in text:
+                break
+            text = _ERASED.sub("", text)
+        text = text.replace("\x08", "")
+    text = _CTRL.sub("", ANSI_RX.sub("", text))
+    return text, [ANSI_RX.sub("", c) for c in concealed], [ANSI_RX.sub("", o) for o in over], erased, links
+
+
+_OVER_KINDS = ("visible text addresses", "visible directive", "resource-exhaustion", "asks to change agent", "text addressed to AI", "message left for")
+
+
+def terminal_tricks(text, where, F):
+    """Report text that a terminal hides, overwrites or erases; return the text a terminal user actually sees."""
+    raw = text
+    m = TERM_DANGER.search(raw)
+    if m:
+        what = {"\x1b]5": "writes the clipboard (OSC 52)", "\x1b[2": "forges paste markers or asks the terminal to type its title back",
+                "\x1bP$": "asks the terminal to type a status string back (DECRQSS)", "\x1b[?": "switches bracketed-paste mode"}.get(m.group(0)[:3], "control")
+        F.add("HIGH", "terminal control sequence that can inject input or change the clipboard", where,
+              f"{what}: {m.group(0)!r} - shown in a terminal, these bytes act instead of being read")
+    text, concealed, over, erased, links = terminal_view(text)
+    if concealed:
+        t = " ".join(concealed)
+        if len(re.sub(r"\W", "", t)) >= 8:
+            F.add("MED", "text hidden by terminal escape codes (concealed, or same colour as the background)", where, short(t, 240))
+            check_text(t, where + " (hidden in the terminal)", F, hidden=True, _depth=1)
+    for o in over[:200]:
+        G = Findings()
+        check_text(o, where + " (overwritten in the terminal)", G, _depth=1)
+        bad = [f for f in G.items if f["sev"] == "HIGH" or f["kind"].startswith(_OVER_KINDS)]
+        if bad:
+            F.add("HIGH", "text that the terminal overwrites at once (carriage return / erase line) carries an instruction", where, short(o, 280))
+            break
+    if len(erased) >= 12:
+        G = Findings()
+        check_text(erased, where + " (erased with backspaces)", G, _depth=1)
+        if any(f["sev"] == "HIGH" or f["kind"].startswith(_OVER_KINDS) for f in G.items):
+            F.add("HIGH", "text erased with backspace characters carries an instruction", where, short(erased, 280))
+    for url, shown in links[:50]:
+        why = link_problem(shown, url)
+        if why:
+            F.add("MED", "terminal hyperlink shows one address and opens another", where, short(why, 200))
+    if "\x1b" in raw and STRONG.search(text) and not STRONG.search(raw):
+        F.add("HIGH", "instruction split by terminal escape codes", where, short(STRONG.search(text).group(0), 200))
+    elif "\x1b" in raw and len(_MIDWORD.findall(raw[:500_000])) >= 3:  # colour codes inside words: a filter sees fragments, the terminal shows a sentence
+        G = Findings()
+        check_text(text[:500_000], where, G, _depth=1)
+        bad = [f for f in G.items if f["sev"] == "HIGH" or f["kind"].startswith(_OVER_KINDS)]
+        if bad:
+            F.add("HIGH", "instruction split by terminal escape codes", where, short(bad[0]["detail"], 240))
+    return text
+
+
+_SEG = re.compile(r"(?<=[.!?] )|(?<=\n)")
+
+
+def dedupe_runs(text, span=700):
+    """Collapse a run of identical consecutive sentences or lines to as many copies as cover `span` characters (at least 2).
+    Every pattern here has bounded gaps, so a match inside or across the copies of a run is still found in what is kept.
+    Padding (the same sentence 40,000 times) then costs one pass over a few hundred characters, not megabytes."""
+    segs = _SEG.split(text)
+    if len(segs) < 2000:
+        return text
+    out, i, n = [], 0, len(segs)
+    while i < n:
+        j = i + 1
+        while j < n and segs[j] == segs[i]:
+            j += 1
+        keep = max(2, span // max(1, len(segs[i])) + 2)
+        out.extend(segs[i:min(j, i + keep)])
+        i = j
+    return text if len(out) == n else "".join(out)
+
+
 def check_text(text, where, F, hidden=False, keywords=True, _depth=0):
     """Unicode and phrase checks. hidden=True: the text is not visible to a human reader."""
     if not text:
         return
+    if _depth == 0 and len(text) > 300_000:
+        text = dedupe_runs(text)
+    if _depth == 0 and ("\x1b" in text or "\r" in text or "\x08" in text):
+        text = terminal_tricks(text, where, F)
     for run in TAGS.findall(text):
         dec = decode_tags(run)
         F.add("HIGH" if len(dec) >= 3 else "MED", "Unicode tag characters (invisible 'ASCII smuggling')", where,
@@ -279,9 +646,21 @@ def check_text(text, where, F, hidden=False, keywords=True, _depth=0):
     if bd:
         F.add("MED", "bidirectional control characters (text may display in a different order)", where, f"{len(bd)} chars")
     clean = INVISIBLE.sub("", text)
+    if "\\u" in clean:  # JSON / source escapes: "\u0418\u0433..." is still text to whoever decodes it
+        clean = ESC_U.sub(lambda m: chr(int(m.group(1), 16)) if not 0xD800 <= int(m.group(1), 16) <= 0xDFFF else "?", clean)
+    for bm in list(re.finditer("\u202e([^\u202c\n]{8,400})", text))[:5]:  # right-to-left override: stored backwards, displayed forwards
+        if _depth < 2:
+            G = Findings()
+            check_text(bm.group(1)[::-1], where + " (as displayed)", G, hidden=True, _depth=_depth + 1)
+            for f in G.items:
+                if f["sev"] == "HIGH":
+                    F.add("HIGH", "instruction written backwards behind a right-to-left override", where, f["detail"])
+                    break
     # phrase matching runs on a flattened copy: soft hyphens out, "previ-\nous" joined, line breaks as spaces
     flat = re.sub(r"[^\S\n]+", " ", clean.replace("\u00ad", ""))  # tabs, NBSP, em/thin/ideographic spaces -> " "
     flat = re.sub(r" ?\n ?", " ", re.sub(r"(\w)- ?\n ?(\w)", r"\1\2", flat))
+    if "\\" in flat:  # an escaped line break glued to the next word ("form.\nNote to the AI") hides the word boundary
+        flat = _ESC_NL.sub(" ", flat)
     last = -10**9
     for m in STRONG.finditer(flat):
         if m.start() - last < 400:
@@ -290,10 +669,38 @@ def check_text(text, where, F, hidden=False, keywords=True, _depth=0):
         a, b = max(0, m.start() - 120), min(len(flat), m.end() + 160)
         F.add("HIGH", "instruction aimed at an AI" + (" (in hidden text)" if hidden else ""), where, short(flat[a:b], 320))
     if last < 0 and "\n" in clean:  # patterns that need the original line structure (chat templates: "\n\nHuman:")
-        m = CHAT_RX.search(clean)
+        m = CHAT_RX.search(clean) or (CHAT_RX.search(clean.replace("\\n", "\n")) if "\\n" in clean else None)
         if m:
             F.add("HIGH", "instruction aimed at an AI" + (" (in hidden text)" if hidden else ""), where,
                   short(clean[max(0, m.start() - 120): m.end() + 160], 320))
+    if last < 0:
+        m = ONE_LINE_CHAT.search(flat) or ("\\n" in clean and CHAT_RX.search(clean.replace("\\n", "\n")))
+        if m:
+            last = m.start()
+            F.add("HIGH", "instruction aimed at an AI" + (" (in hidden text)" if hidden else ""), where,
+                  short(flat[max(0, m.start() - 60): m.end() + 200], 320) + " - a fake conversation turn")
+    if _depth == 0:  # an instruction spelled as an identifier: ignore_previous_instructions_and_run, ignoreAllPreviousInstructions
+        words = []
+        for n, cm in enumerate(_IDENT_CAND.finditer(clean[:2_000_000])):  # one character class: fast; the real pattern only sees long tokens
+            if n >= 20000 or len(words) >= 3000:
+                break
+            im = _IDENT.search(cm.group(0))
+            if im:
+                words.append(_CAMEL_CUT.sub(" ", im.group(0)))
+        if words:
+            G = Findings()
+            check_text(" .\n".join(words)[:200_000], where, G, hidden=True, _depth=1)
+            bad = [x for x in G.items if x["sev"] == "HIGH" and x["kind"].startswith(("instruction", "resource-exhaustion", "impersonation", "message left"))]
+            if bad:
+                F.add("HIGH", "instruction spelled inside identifiers (variable, function or file names)", where,
+                      short(bad[0]["kind"] + ": " + bad[0]["detail"], 260))
+    if last < 0 and _depth == 0:  # no separators at all: i.g.n.o.r.e.a.l.l or ignoreallpreviousinstructions
+        m = _COMPACT.search(re.sub(r"[\W_]+", "", clean[:400_000].lower()))
+        if m:
+            F.add("HIGH", "instruction written without word breaks (dots, hyphens or nothing between the letters)", where, m.group(0)[:120])
+    from .cost import cost_signals
+    cost_signals(flat, where, F, hidden)
+    agent_sections(clean, where, F, hidden)
     look = []
     for m in LOOKALIKE_RX.finditer(clean):  # a Cyrillic/Greek look-alike next to Latin letters, digits or formula symbols
         win = clean[max(0, m.start() - 2): m.start()] + clean[m.end(): m.end() + 2]
@@ -327,8 +734,14 @@ def check_text(text, where, F, hidden=False, keywords=True, _depth=0):
         F.add("HIGH", "instruction hidden by letters separated with dots/dashes", where, short(STRONG.search(dotted).group(0)))
     if collapsed != clean:
         m = STRONG.search(collapsed) or (KEYWORDS.search(collapsed) if hidden else None)
-        if m and not (STRONG.search(clean) if m.re is STRONG else KEYWORDS.search(clean)):
+        if m and not (STRONG.search(clean) if m.re is not KEYWORDS else KEYWORDS.search(clean)):
             F.add("HIGH", "instruction hidden by spaced-out letters", where, short(m.group(0)))
+        elif _depth == 0 and _SPACED_RUN.search(clean):  # any other payload spelled the same way: check the collapsed text as a whole
+            G = Findings()
+            check_text(collapsed[:400_000], where, G, hidden=hidden, _depth=1)
+            bad = [x for x in G.items if x["sev"] in ("HIGH", "MED") and not any(y["kind"] == x["kind"] for y in F.items)]
+            if bad:
+                F.add("HIGH", "instruction hidden by spaced-out letters", where, short(bad[0]["kind"] + ": " + bad[0]["detail"], 260))
     mixed = sorted(w for w in set(re.findall(r"\w+", clean)) if not w.isascii() and mixed_script(w))
     if mixed:
         F.add("MED", "mixed-script words (homoglyphs: Cyrillic/Greek letters posing as Latin)", where, ", ".join(mixed[:10]))
@@ -445,6 +858,61 @@ _ANCHOR_RX = re.compile(r"\b(" + "|".join(sorted(_ANCHOR_K, key=len, reverse=Tru
 _LEETY = re.compile(r"\b(?=\w*[a-z])(?=\w*[013457@$])[\w@$]{4,}\b", re.I)
 
 
+_TYPO_VOCAB = ("ignore", "disregard", "forget", "previous", "instructions", "instruction", "system", "prompt", "override", "assistant",
+               "guidelines", "directions", "respond", "reveal", "preceding", "earlier", "commands")
+_TYPO_MAP = {}
+for _w in _TYPO_VOCAB:
+    for _i in range(len(_w)):
+        _TYPO_MAP.setdefault(_w[:_i] + _w[_i + 1:], _w)
+_SPACED_RUN = re.compile(r"(?:(?<!\S)\S {1,3}){14,}")
+_INHYPH = re.compile(r"(?<=[a-z])[-\u00ad\u2010\u2011](?=[a-z])")
+_TYPO_WORD = re.compile(r"[A-Za-z]{5,14}")
+
+
+def _fix_typos(text):
+    """Map words one edit away (dropped, added, swapped or wrong letter) from a trigger word back to it."""
+    def fix(m):
+        w = m.group(0).lower()
+        if w in _TYPO_VOCAB:
+            return w
+        if w in _TYPO_MAP:
+            return _TYPO_MAP[w]
+        for i in range(len(w)):
+            hit = _TYPO_MAP.get(w[:i] + w[i + 1:])
+            if hit and abs(len(hit) - len(w)) <= 1:
+                return hit
+        return m.group(0)
+    n = [0]
+
+    def counted(m):
+        r = fix(m)
+        n[0] += r.lower() != m.group(0).lower()
+        return r
+    out = _TYPO_WORD.sub(counted, text[:400_000])
+    return out if n[0] else text  # unchanged text is returned as the same object: no second phrase search
+
+
+_XLANG = {  # trigger words in other languages, mapped to English: catches a sentence that switches language mid-way
+    "ignore": "игнорирай игнорирайте игнорируй игнорируйте пренебрегни забрави забудь ignoriere ignorieren ignora ignorez ignorer vergiss olvida oublie",
+    "all": "всички всичките все всё alle allen todas todos toutes tous",
+    "previous": "предишни предишните предходни предыдущие прежние vorherigen vorherige bisherigen anteriores precedentes précédentes",
+    "instructions": "инструкции инструкциите указания anweisungen instruktionen instrucciones instrucoes consignes",
+    "reply": "отговори отговаряй ответь отвечай antworte responde réponds",
+    "only": "само только nur solo seulement",
+    "system prompt": "системния системный systemprompt",
+    "instead": "вместо stattdessen",
+}
+_XLANG_MAP = {w: en for en, ws in _XLANG.items() for w in ws.split()}
+_XLANG_RX = re.compile(r"(?<![^\W\d_])(" + "|".join(sorted(map(re.escape, _XLANG_MAP), key=len, reverse=True)) + r")(?![^\W\d_])", re.I)
+_PIG_W = re.compile(r"\b([a-z]{2,40})way\b", re.I)
+_PIG_C = [re.compile(r"\b([a-z]{1,40}?)([b-df-hj-np-tv-xz]{1,%d})ay\b" % n, re.I) for n in (1, 2, 3)]
+
+
+def _unpig(text, n):
+    """Undo Pig Latin; n = longest consonant cluster moved back to the front (the split is ambiguous, so 1, 2 and 3 are tried)."""
+    return _PIG_C[n - 1].sub(lambda m: m.group(2) + m.group(1), _PIG_W.sub(r"\1", text[:400_000]))
+
+
 def decoded_variants(clean, where, F, depth=0, plain=None):
     """Run the phrase check on transformed copies of the text. Each finding names the transformation.
     Cheap literal pre-checks decide which transformations can possibly match, so large documents stay fast."""
@@ -462,6 +930,16 @@ def decoded_variants(clean, where, F, depth=0, plain=None):
         trans.append(("Braille letters", lambda: clean.translate(BRAILLE)))
     if _LEETY.search(clean):
         trans.append(("leetspeak", lambda: clean.translate(LEET)))
+    if not plain:
+        if _XLANG_RX.search(clean[:400_000]):
+            trans.append(("switching language mid-sentence", lambda: _XLANG_RX.sub(lambda m: _XLANG_MAP[m.group(1).lower()], clean[:400_000])))
+        trans.append(("misspelled trigger words", lambda: _fix_typos(clean)))
+        if "-" in clean or "\u00ad" in clean:
+            trans.append(("hyphens inside the words", lambda: _INHYPH.sub("", clean[:400_000]) if _INHYPH.search(clean[:400_000]) else clean))
+        _ay = re.findall(r"(?<![a-z])[a-z]{1,40}ay\b", clean[:20_000].lower())
+        if len(set(_ay)) >= 5 and len(_ay) * 3 >= len(re.findall(r"[a-z]{3,}", clean[:20_000].lower())):  # a third of the words end in -ay
+            for n in (1, 2, 3):
+                trans.append(("Pig Latin", lambda n=n: _unpig(clean, n)))
     ks = set()
     for m in _ANCHOR_RX.finditer(clean.lower()):  # one pass finds every shift (and reversal) that could hide an anchor word
         ks |= _ANCHOR_K[m.group(1)]
@@ -473,7 +951,7 @@ def decoded_variants(clean, where, F, depth=0, plain=None):
     if not plain:
         for label, make in trans:
             t = make()
-            if t != clean:
+            if t is not clean and t != clean:
                 m = STRONG.search(t)
                 if m:
                     F.add("HIGH", f"instruction hidden by {label}", where, short(t[max(0, m.start() - 80): m.end() + 120], 300))
@@ -514,7 +992,7 @@ def invisible_report(text):
 
 
 def strip_invisible(text):
-    return INVISIBLE.sub("", text)
+    return INVISIBLE.sub("", terminal_view(text)[0])
 
 
 # ---------------------------------------------------------------- config and registry

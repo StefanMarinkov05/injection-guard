@@ -6,6 +6,7 @@ PDF metadata, ActualText, hidden layers, attachments, glyph-to-Unicode remaps. C
 writes are reported separately - they matter for downloaded templates even without any prompt injection.
 """
 import re
+from .common import hidden_instruction
 from .common import DIRECTIVE, IMPERSONATION, KEYWORDS, STRONG, check_text, hidden_task_signal, short, whitespace_stego
 
 LATEX_EXT = {".tex", ".sty", ".cls", ".bib", ".ltx", ".dtx", ".ins", ".bbx", ".cbx", ".def", ".cfg", ".bst", ".clo", ".lbx"}
@@ -66,7 +67,7 @@ def _hidden(F, kind, where, text, sev_plain="INFO", wordy_sev="MED", source_visi
     t = " ".join(text.split())
     if not t:
         return
-    if STRONG.search(t) or KEYWORDS.search(t) or IMPERSONATION.search(t):
+    if hidden_instruction(t) or IMPERSONATION.search(t):
         F.add("HIGH", kind + " with AI-directed text", where, short(t, 300))
         check_text(t, where, F, hidden=True)
     elif DIRECTIVE.search(t):
@@ -90,7 +91,7 @@ def scan_latex(src, F, name="tex"):
         comments.append((m.start(), m.group(1)))
     ctext = "\n".join(c for _, c in comments)
     if comments:
-        hits = [(i, c) for i, c in comments if STRONG.search(c) or KEYWORDS.search(c)]
+        hits = [(i, c) for i, c in comments if hidden_instruction(c)]
         for i, c in hits[:10]:
             F.add("HIGH", "LaTeX comment with AI-directed text (never printed)", f"{name}:{_line(src, i)}", short(c, 300))
         joined = " ".join(c.strip() for _, c in comments)
@@ -175,7 +176,7 @@ def scan_latex(src, F, name="tex"):
         for m in re.finditer(r"\b(note|annote|annotation|abstract|keywords|comment|howpublished|addendum)\s*=\s*[{\"]", src, re.I):
             a, _ = _args(src, m.end() - 1, 1) if src[m.end() - 1] == "{" else ([src[m.end():src.find('"', m.end())]], 0)
             val = a[0] if a else ""
-            if STRONG.search(val) or KEYWORDS.search(val) or DIRECTIVE.search(val):
+            if hidden_instruction(val) or DIRECTIVE.search(val):
                 F.add("HIGH", f"BibTeX field {m.group(1)} with AI-directed text or a directive", f"{name}:{_line(src, m.start())}", short(val, 300))
     # whole file: Unicode tricks, look-alikes, encodings, visible phrases, whitespace steganography
     whitespace_stego(src, name, F)

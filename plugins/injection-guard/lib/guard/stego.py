@@ -7,6 +7,7 @@ instruction may ask the agent to run.
 """
 import re, struct, zlib
 from PIL import Image, ImageChops
+from .common import hidden_instruction
 from .common import KEYWORDS, STRONG, check_text, short
 
 KNOWN_PNG = {b"IHDR", b"PLTE", b"IDAT", b"IEND", b"tRNS", b"cHRM", b"gAMA", b"iCCP", b"sBIT", b"sRGB", b"cICP", b"mDCv",
@@ -84,7 +85,7 @@ def jpeg_segments(raw, F, where):
 def file_strings(raw, F, where):
     """Any instruction-like string anywhere in the bytes (headers, trailers, private chunks, polyglot parts)."""
     for s in _texty(raw[:40_000_000]):
-        if STRONG.search(s) or KEYWORDS.search(s):
+        if hidden_instruction(s):
             F.add("HIGH", "AI-directed text inside the image file bytes (not part of the picture)", where, short(s, 300))
             break
 
@@ -141,7 +142,7 @@ def lsb_payload(im, F, where):
             words = [r for r in runs if re.search(r"\b[A-Za-z]{3,}+ [A-Za-z]{2,}+ [A-Za-z]{3,}+", r)]
             if words:
                 txt = " ".join(words)
-                sev = "HIGH" if (STRONG.search(txt) or KEYWORDS.search(txt)) else "MED"
+                sev = "HIGH" if (hidden_instruction(txt)) else "MED"
                 F.add(sev, f"LSB steganography: readable text in the lowest bit plane ({name}, {order})", where, short(txt, 300))
                 if sev == "HIGH":
                     check_text(txt, where + " LSB payload", F, hidden=True)

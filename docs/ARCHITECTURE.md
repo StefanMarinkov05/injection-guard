@@ -28,7 +28,8 @@ safe-read FILE ──► scan.main_read ──► scan.scan_file(path, F)
 | `readers.py` | poppler vs MuPDF vs pypdf text comparison |
 | `ocr.py` | tesseract wrappers, page OCR vs text layer, faint-text OCR, picture OCR |
 | `polyglot.py` | polyglot signatures, revisions, duplicate objects, trailers, PDF JavaScript runtime calls |
-| `web.py` | HTML/SVG sanitiser, CSS hiding rules, data: URIs, scripts, direction tricks |
+| `web.py` | HTML/SVG sanitiser, CSS hiding rules, data: URIs, scripts, direction tricks, deceptive links, `check_output()` (structural pass for markup that arrives as tool output) |
+| `cost.py` | token-cost instructions (`cost_signals()`), `squeeze()` (repeated lines, padding and encoded blobs collapsed in the printed text) |
 | `office.py` | DOCX/PPTX/XLSX/ODF/EPUB parsers, generic zip archives |
 | `latex.py` | LaTeX/BibTeX hidden spans and compile-time code |
 | `textdoc.py` | Markdown/plain text, images (metadata, faint content) |
@@ -61,3 +62,9 @@ The pre-hook denies raw reads of documents whose SHA-256 has no registry entry, 
 (strict mode). Trust is bound to the exact bytes: any change re-opens the gate. Guard files, cache and the plugin's
 settings entry are protected with `ask`. Config: `~/.config/injection-guard/config.json` (`mode`, `block_on`,
 `trusted_paths`, `html_in_git_is_source`), environment override `INJECTION_GUARD_MODE`.
+
+**Session taint.** When a HIGH finding reaches the context (tool output, a flagged safe-read report, hidden text in a
+pasted prompt), the session is marked for `taint_minutes`. While marked, the pre-hook asks before commands that an
+injected instruction would want: sending data out, reading credentials, installing packages, changing what runs
+later, git options that run a program, and local scripts whose content does any of these (the script is read when it
+is run, so writing it in harmless steps does not help). Detection can miss wording; this gate does not depend on it.

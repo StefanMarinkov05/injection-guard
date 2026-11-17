@@ -1,6 +1,7 @@
 """DOCX / PPTX / XLSX / ODF / EPUB: visible text plus hidden runs, comments, notes, metadata, hidden sheets."""
 import re, zipfile
 import xml.etree.ElementTree as ET
+from .common import hidden_instruction
 from .common import DIRECTIVE, IMPERSONATION, KEYWORDS, SENTENCE, STRONG, check_text, hidden_task_signal, short
 from .web import sanitize_html
 
@@ -21,7 +22,7 @@ def _xml(z, name):
 def _flag_hidden(F, where, text, kind):
     if not text.strip():
         return
-    if STRONG.search(text) or KEYWORDS.search(text) or DIRECTIVE.search(text) or hidden_task_signal(text) or IMPERSONATION.search(text):
+    if hidden_instruction(text) or DIRECTIVE.search(text) or hidden_task_signal(text) or IMPERSONATION.search(text):
         F.add("HIGH", kind, where, short(text, 400))
         check_text(text, where, F, hidden=True)
     else:
@@ -32,7 +33,7 @@ def _meta(z, F):
     for name in ("docProps/core.xml", "docProps/app.xml", "docProps/custom.xml", "meta.xml"):
         if name in z.namelist():
             t = " ".join(x.strip() for x in _xml(z, name).itertext() if x.strip())
-            if STRONG.search(t) or KEYWORDS.search(t) or DIRECTIVE.search(t):
+            if hidden_instruction(t) or DIRECTIVE.search(t):
                 F.add("HIGH", "document metadata with AI-directed text or directives", name, short(t, 300))
     for name in z.namelist():
         if name.startswith("customXml/") and name.endswith(".xml") and "itemProps" not in name:
@@ -111,13 +112,13 @@ def scan_docx(z, F):
         for reason, chunks in hid.items():
             t = " ".join(chunks)
             if reason.startswith("white"):
-                if STRONG.search(t) or KEYWORDS.search(t):
+                if hidden_instruction(t) or DIRECTIVE.search(t):
                     F.add("HIGH", reason + " with AI-directed words", name, short(t, 300))
                 continue
             _flag_hidden(F, name, t, reason)
         for d in root.iter("{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}docPr"):
             alt = (d.get("descr") or "") + " " + (d.get("title") or "")
-            if STRONG.search(alt) or KEYWORDS.search(alt):
+            if hidden_instruction(alt) or DIRECTIVE.search(alt):
                 F.add("HIGH", "image alt text with AI-directed words", name, short(alt, 300))
     if "word/comments.xml" in z.namelist():
         t = " ".join(x for x in _xml(z, "word/comments.xml").itertext())
@@ -155,7 +156,7 @@ def scan_pptx(z, F):
                     shape_hidden = True  # placed outside the slide
             if cnv is not None:
                 alt = (cnv.get("descr") or "") + " " + (cnv.get("title") or "")
-                if STRONG.search(alt) or KEYWORDS.search(alt):
+                if hidden_instruction(alt) or DIRECTIVE.search(alt):
                     F.add("HIGH", "shape alt text with AI-directed words", f"slide {num}", short(alt, 300))
             for para in sp.iter(A + "p"):
                 for r in para.iter(A + "r"):
@@ -170,7 +171,7 @@ def scan_pptx(z, F):
     notes = [n for n in z.namelist() if re.match(r"ppt/notesSlides/notesSlide\d+\.xml$", n)]
     for name in notes:
         t = " ".join(x.text or "" for x in _xml(z, name).iter(A + "t"))
-        if STRONG.search(t) or KEYWORDS.search(t):
+        if hidden_instruction(t) or DIRECTIVE.search(t):
             F.add("HIGH", "speaker notes with AI-directed text (not shown in the slideshow)", name, short(t, 300))
     if notes:
         F.add("INFO", "speaker notes present (excluded from output)", "ppt/notesSlides", f"{len(notes)} note page(s)")
@@ -249,6 +250,10 @@ def scan_archive(z, F):
                 if ".." in name.split("/") or name.startswith("/"):
                     F.add("HIGH", "zip entry with a path-traversal name", name, "would be written outside the extraction folder")
                     continue
+                if info.file_size > 4 * 1024 * 1024 and info.file_size > 200 * max(1, info.compress_size):
+                    F.add("MED", "compression bomb: a tiny entry unpacks to a huge file (not unpacked)", name,
+                          f"{info.compress_size} bytes become {info.file_size} bytes")
+                    continue
                 if info.file_size > budget:
                     F.add("MED", "zip entry too large to scan", name, f"{info.file_size} bytes")
                     continue
@@ -276,14 +281,12 @@ def scan_zip_doc(path, F):
             F.add("MED", "very large uncompressed size (zip bomb?)", "package", f"{total} bytes")
             return "", "zip"
         _meta(z, F)
-        if "word/document.xml" in names:
-            return scan_docx(z, F), "docx"
-        if any(n.startswith("ppt/slides/") for n in names):
-            return scan_pptx(z, F), "pptx"
-        if "xl/workbook.xml" in names:
-            return scan_xlsx(z, F), "xlsx"
-        if "content.xml" in names:
-            return scan_odf(z, F), "odf"
+        for probe, fn, kind in (("word/document.xml", scan_docx, "docx"), (None, scan_pptx, "pptx"), ("xl/workbook.xml", scan_xlsx, "xlsx"),
+                                ("content.xml", scan_odf, "odf")):
+            if (probe in names) if probe else any(n.startswith("ppt/slides/") for n in names):
+                text = fn(z, F)
+                check_text(text[:3_000_000], kind + " text", F)  # the visible text: an instruction in plain sight is still an instruction
+                return text, kind
         if "META-INF/container.xml" in names:
             return scan_epub(z, F), "epub"
         return scan_archive(z, F), "zip"
