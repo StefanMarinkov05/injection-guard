@@ -4,12 +4,15 @@
     "SessionStart": [
       { "hooks": [ { "type": "command", "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_hook.py\" session", "timeout": 10 } ] }
     ],
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_hook.py\" prompt", "timeout": 10 } ] }
+    ],
     "PreToolUse": [
-      { "matcher": "Read|WebFetch|Bash|Edit|Write|MultiEdit|NotebookEdit",
+      { "matcher": "Read|WebFetch|Bash|Edit|Write|MultiEdit|NotebookEdit|mcp__.*",
         "hooks": [ { "type": "command", "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_hook.py\" pre", "timeout": 20 } ] }
     ],
     "PostToolUse": [
-      { "matcher": "Read|Bash|Grep|WebFetch|WebSearch|Agent|Task|mcp__.*",
+      { "matcher": ".*",
         "hooks": [ { "type": "command", "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_hook.py\" post", "timeout": 20 } ] }
     ]
   }

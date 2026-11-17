@@ -89,7 +89,25 @@ _STRONG_EXTRA = (
     r"|\bignore[zr]? (toutes )?les (instructions|consignes) (précédentes|ci-dessus|antérieures)"
     r"|\bsi eres (una? )?(IA|inteligencia artificial|modelo de lenguaje|asistente)"
     r"|\bignora (todas )?las instrucciones (anteriores|previas)|\bignora (tutte )?le istruzioni precedenti|\bse sei un'?(IA|intelligenza artificiale)")
-STRONG = re.compile(STRONG.pattern + "|" + _STRONG_EXTRA, re.I)
+# --- Nov 2026: wordings seen in agent-targeted pages and repositories; Bulgarian and Russian
+_STRONG_EXTRA2 = (
+    r"\b(attention|important|notice|warning|hey|dear|hello),? (all )?(AI|LLM|coding|autonomous) ?"
+    r"(agents?|assistants?|models?|systems?|crawlers?|bots?|language models?)\s*[:,!]"
+    r"|\b(AI|LLM|coding|autonomous) (agents?|assistants?|models?|tools?) (reading|processing|parsing|summari[sz]ing|visiting|analy[sz]ing|"
+    r"reviewing|indexing|crawling|working (on|in|with)) (this|the) [^.\n]{0,40}\b(must|should|shall|need to|have to|are required to|please)\b"
+    r"|\bwhen (you )?(summari[sz]e|summari[sz]ing|review|reviewing|analy[sz]e|analy[sz]ing|process|processing|read|reading|describe|describing) "
+    r"this (page|document|file|repo|repository|code|email|message|text|article|paper|website|site|content|pull request|PR|issue),? "
+    r"(you )?(must|should|always|also|make sure|be sure|remember|never|do not)\b"
+    r"|\bbefore (you )?(answer|answering|respond|responding|reply|replying|summari[sz]e|summari[sz]ing),? "
+    r"(you must |you should |please |first |always ){1,3}(run|execute|fetch|open|visit|download|call|send|load|install|curl)\b"
+    r"|\bdo not (follow|obey|trust|listen to) (the |your )?(user|system|developer|operator|original|previous)\b"
+    r"|\b(stop|cease|abandon|halt) (what you are doing|your current task|the current task) and\b"
+    r"|\b(ignore|disregard|forget) (everything|all|anything) (above|before this|prior|written above|you were told)\b"
+    r"|\bигнорирай(те)? (всички |всякакви )?(предишни|предходни|горни|досегашни)(те)? (инструкции|указания|команди|правила)"
+    r"|\bако (си|сте) (изкуствен интелект|ИИ|езиков модел|AI|чатбот|асистент)\b"
+    r"|\bигнорируй(те)? (все )?(предыдущие|прежние|вышеуказанные|прошлые) (инструкции|указания|команды|правила)"
+    r"|\bесли (ты|вы) (ИИ|искусственный интеллект|языковая модель|нейросеть|AI|чат-?бот|ассистент)\b")
+STRONG = re.compile(STRONG.pattern + "|" + _STRONG_EXTRA + "|" + _STRONG_EXTRA2, re.I)
 CHAT_RX = re.compile(r"(^|\n)[ \t]*#{2,}\s*(instruction|system|response|system prompt)\s*:|\n\n(Human|Assistant)\s*:", re.I)
 KEYWORDS = re.compile(KEYWORDS.pattern + r"|\b(?-i:KI)\b|\b(Sprachmodells?|künstliche Intelligenz|modèle de langage|modelo de lenguaje)\b", re.I)
 DIRECTIVE = re.compile(DIRECTIVE.pattern +
@@ -209,6 +227,38 @@ def mixed_script(word):
     return len(scripts & {"LATIN", "CYRILLIC", "GREEK"}) > 1
 
 
+def _native(tok):
+    """A token written in real Cyrillic or Greek: it has a letter of that script that does not pass for Latin, and no Latin."""
+    nat = False
+    for c in tok:
+        if c.isascii():
+            if c.isalpha():
+                return False
+        elif c.isalpha() and c not in LOOKALIKE and unicodedata.name(c, "").split(" ")[0] in ("CYRILLIC", "GREEK"):
+            nat = True
+    return nat
+
+
+def natural_script(clean, i):
+    """True if the look-alike letter at i belongs to ordinary Cyrillic/Greek writing rather than to a Latin word, an
+    identifier or a formula: its own word is native, or it is a one-word particle next to a native word (bg "а не")."""
+    n = len(clean)
+    a = i
+    while a > 0 and i - a < 48 and not clean[a - 1].isspace():   # bounded: a megabyte-long "word" must stay linear
+        a -= 1
+    b = i
+    while b < n and b - i < 48 and not clean[b].isspace():
+        b += 1
+    tok = clean[a:b]
+    if _native(tok):
+        return True
+    if any(c.isascii() and (c.isalnum() or c in "()*+{}[]|_^=") for c in tok):
+        return False
+    prev = clean[max(0, a - 40):a].split()
+    nxt = clean[b:b + 40].split()
+    return bool((prev and _native(prev[-1])) or (nxt and _native(nxt[0])))
+
+
 def check_text(text, where, F, hidden=False, keywords=True, _depth=0):
     """Unicode and phrase checks. hidden=True: the text is not visible to a human reader."""
     if not text:
@@ -247,7 +297,7 @@ def check_text(text, where, F, hidden=False, keywords=True, _depth=0):
     look = []
     for m in LOOKALIKE_RX.finditer(clean):  # a Cyrillic/Greek look-alike next to Latin letters, digits or formula symbols
         win = clean[max(0, m.start() - 2): m.start()] + clean[m.end(): m.end() + 2]
-        if re.search(r"[A-Za-z0-9()*+{}\[\],|_^]", win):
+        if re.search(r"[A-Za-z0-9()*+{}\[\],|_^]", win) and not natural_script(clean, m.start()):
             look.append(clean[max(0, m.start() - 6): m.end() + 6].replace("\n", " "))
     if look:
         F.add("MED", "look-alike letters in Latin text or a formula (Cyrillic/Greek characters that pass for Latin)", where,
@@ -438,6 +488,31 @@ def decoded_variants(clean, where, F, depth=0, plain=None):
             check_text(dec, where + f" (decoded {enc})", F, hidden=True, _depth=depth + 1)
 
 
+def invisible_report(text):
+    """Invisible-character findings only, for text where any wording is legitimate (the user's own prompt, instruction
+    files). Returns (notes, decoded hidden text). ZWJ/ZWNJ (emoji, Persian, Indic) and single variation selectors are normal."""
+    notes, hidden = [], []
+    for run in TAGS.findall(text):
+        dec = decode_tags(run)
+        notes.append(f"{len(run)} Unicode tag characters" + (f" decoding to {short(dec, 200)!r}" if dec else ""))
+        hidden.append(dec)
+    for run in VS_RUN.findall(text):
+        if len(run) >= 4:
+            dec = decode_vs(run)
+            notes.append(f"{len(run)} variation selectors after one character, decoding to {short(dec, 200)!r}")
+            hidden.append(dec)
+    if BIDI.search(text):
+        notes.append("bidirectional control characters (the text displays in a different order than it is stored)")
+    zw = [c for c in ZERO_WIDTH.findall(text) if c not in "\u200c\u200d"]
+    if len(zw) >= 3:
+        notes.append(f"{len(zw)} zero-width characters (" + " ".join(f"U+{ord(c):04X}" for c in sorted(set(zw))) + ")")
+        collapsed = ZERO_WIDTH.sub("", text)
+        m = STRONG.search(collapsed)
+        if m and not STRONG.search(text):
+            hidden.append(m.group(0))
+    return notes, " ".join(h for h in hidden if h)
+
+
 def strip_invisible(text):
     return INVISIBLE.sub("", text)
 
@@ -448,6 +523,7 @@ DEFAULT_CONFIG = {
     "trusted_paths": [],         # files below these directories skip the read gate (post-scan warnings still apply)
     "html_in_git_is_source": True,  # .html/.svg inside a git work tree count as source code, not documents
     "block_on": "MED",           # raw reads are blocked for files with findings at or above this level (HIGH or MED)
+    "taint_minutes": 30,         # after a HIGH finding, risky actions (send data, read secrets, install, persist) ask for this long; 0 = off
 }
 
 
