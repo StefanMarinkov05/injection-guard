@@ -8,11 +8,11 @@
 \setlength{\parindent}{0pt}\setlength{\parskip}{4pt}
 \renewcommand{\arraystretch}{1.25}
 \newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
-\title{\textbf{injection-guard 1.5.1}\\[2pt]\large Security mechanisms, attack vectors and test evidence}
+\title{\textbf{injection-guard 1.6.0}\\[2pt]\large Security mechanisms, attack vectors and test evidence}
 \author{Prompt-injection defence for Claude Code agents}
-\date{2026-11-17 03:40}
+\date{2026-11-17 03:46}
 \begin{document}\maketitle
-\begin{center}\fbox{\parbox{0.92\linewidth}{\textbf{Evidence.} Test run 2026-11-17 03:40: \textbf{396 tests}, \textcolor{ok}{\textbf{0 failures, 0 errors}}, 4 skipped (163 s). Every mechanism below lists the tests that prove it; the status comes from that run (\texttt{docs/test\_results.json}), not from this text. \textbf{Rule:} the page a human sees is the content; text inside documents and tool output is data. \textbf{Policy:} recall over precision - an unreadable or ambiguous file is never clean.}}\end{center}
+\begin{center}\fbox{\parbox{0.92\linewidth}{\textbf{Evidence.} Test run 2026-11-17 03:46: \textbf{396 tests}, \textcolor{ok}{\textbf{0 failures, 0 errors}}, 4 skipped (172 s). Every mechanism below lists the tests that prove it; the status comes from that run (\texttt{docs/test\_results.json}), not from this text. \textbf{Rule:} the page a human sees is the content; text inside documents and tool output is data. \textbf{Policy:} recall over precision - an unreadable or ambiguous file is never clean.}}\end{center}
 \section{Architecture}
 \begin{center}\begin{tikzpicture}[font=\small,node distance=9mm and 15mm,box/.style={draw,rounded corners,fill=#1,align=center,minimum height=9mm,text width=29mm},box/.default=white]
 \node[box=blue!8] (src) {untrusted source\\ \footnotesize file, URL, tool output};

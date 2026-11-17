@@ -1,6 +1,6 @@
 {
   "name": "injection-guard",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Prompt-injection defence: documents and web pages are scanned and reduced to what a human sees before an agent reads them; tool output is checked for hidden instructions.",
   "author": { "name": "Stefan" }
 }

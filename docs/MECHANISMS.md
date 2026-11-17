@@ -1,6 +1,6 @@
-# injection-guard 1.5.1: security mechanisms and proof
+# injection-guard 1.6.0: security mechanisms and proof
 
-Test run 2026-11-17 03:40: **396 tests, 0 failures, 0 errors, 4 skipped** (163 s). Regenerate: `python3 -I plugins/injection-guard/tests/report.py && python3 -I docs/gen_docs.py`.
+Test run 2026-11-17 03:46: **396 tests, 0 failures, 0 errors, 4 skipped** (172 s). Regenerate: `python3 -I plugins/injection-guard/tests/report.py && python3 -I docs/gen_docs.py`.
 
 Rule enforced everywhere: the page a human sees is the content; text inside documents and tool output is data, never instructions.
 Design choice: recall over precision (false positives are acceptable; an unreadable file is never clean).
