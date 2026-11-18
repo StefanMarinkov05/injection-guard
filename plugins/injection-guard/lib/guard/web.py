@@ -1,5 +1,6 @@
 """HTML / XHTML / SVG sanitiser: keeps what a human sees, reports and removes everything hidden."""
 import re
+from html import unescape as html_unescape
 from html.parser import HTMLParser
 from .common import (DIRECTIVE, ESC_U, IMPERSONATION, KEYWORDS, SENTENCE, STRONG, check_text, decoded_variants, hidden_instruction,
                      hidden_task_signal, link_problem, short, whitespace_stego)
@@ -175,6 +176,10 @@ class Sanitizer(HTMLParser):
                 sanitize_html(v, self.F, self.where + " srcdoc", self.depth + 1)
             if k.startswith("data-") and len(v) > 20 and (hidden_instruction(v) or DIRECTIVE.search(v)):
                 self.F.add("HIGH", f"data attribute {k} with AI-directed text", f"{self.where} <{tag}>", short(v, 300))
+            elif k.startswith("data-") and len(v) >= 24:
+                decoded_variants(v[:200_000], f"{self.where} <{tag} {k}>", self.F)  # encoded payload a handler decodes on click
+            if k.startswith("on") and len(v) > 8:
+                self.hidden.setdefault("<script>", []).append(v)  # inline handlers are scripts too
         if tag == "meta" and a.get("content") and (a.get("name") or a.get("property")):
             self.hidden.setdefault("<meta> content", []).append(f"{a.get('name') or a.get('property')}: {a['content']}")
         if not hid and tag == "img" and a.get("alt"):
@@ -239,6 +244,10 @@ DECODE = re.compile(r"\batob\s*\(|fromCharCode|crypto\.subtle|\.decrypt\s*\(|\be
 FINGERPRINT = re.compile(r"navigator\.(webdriver|userAgent|languages?|platform|plugins|hardwareConcurrency)|"
                          r"\bnew Date\b|Date\.now|Intl\.DateTimeFormat|timeZone|screen\.(width|height)|document\.referrer|"
                          r"HeadlessChrome|puppeteer|playwright|selenium|__nightmare|callPhantom", re.I)
+PUSH = re.compile(r"new\s+(WebSocket|EventSource)\b|\b(socket\.io|io\.connect|Pusher|ably|signalr)\b", re.I)
+TIMER = re.compile(r"\bset(Timeout|Interval)\s*\(")
+TIMER_DELAY = re.compile(r",\s*(\d{4,9})\s*\)")
+NET = re.compile(r"\bfetch\s*\(|XMLHttpRequest|\$\.(get|ajax|load)\b|\baxios\b|\bimport\s*\(", re.I)
 JS_STR = re.compile(r"\"((?:[^\"\\\n]|\\.){20,})\"|'((?:[^'\\\n]|\\.){20,})'|`([^`]{20,})`")
 
 
@@ -254,6 +263,14 @@ def js_checks(js, F, where):
               f"{w.group(0)} + {sorted(set(fp))[:6]}")
     elif w:
         F.add("INFO", "script writes page content at runtime", where, w.group(0))
+    if w:
+        push = PUSH.search(js)
+        delays = [int(x) for x in TIMER_DELAY.findall(js[:5_000_000])] if TIMER.search(js) and NET.search(js) else []
+        if push or any(x >= 5000 for x in delays):
+            how = f"push channel {push.group(1)}" if push else f"timer of {max(delays) / 1000:.0f} s + network request"
+            F.add("MED", "page content arrives after the page is read (server data written into the page later)", where,
+                  f"{how} + {w.group(0)} - an agent that reads this page later sees text this scan did not; "
+                  "freeze it once (safe-fetch --out) and work from the copy, or rescan every read")
     for m in JS_STR.finditer(js[:5_000_000]):
         lit = next(g for g in m.groups() if g)
         if "\\u" in lit:
@@ -307,14 +324,22 @@ MIRROR_RX = re.compile(r"transform\s*:\s*[^;\"']*(scale[XY]?\(\s*-1|rotate[XY]?\
 
 def direction_tricks(src, F, where):
     """Text whose display order or glyphs differ from its DOM order: humans read one thing, extractors another."""
+    hid_cls, hid_ids = css_hidden_selectors(" ".join(re.findall(r"<style[^>]*>(.*?)</style>", src[:5_000_000], re.S | re.I)))
     for m in DIR_RX.finditer(src[:5_000_000]):
-        t = (m.group(2) or m.group(5) or "").strip()
+        t = html_unescape((m.group(2) or m.group(5) or "").strip())  # unescape before reversing: "&#x27;" reversed is garbage
         if re.search(r"[A-Za-z]{2,}", t):
             F.add("MED", "text direction override on Latin text (displayed reversed relative to the DOM)", where,
                   f"DOM: {short(t, 100)!r} / displayed: {short(t[::-1], 100)!r}")
-            check_text(t[::-1], where + " (as displayed)", F)
+            tag = m.group(0)[: m.group(0).find(">") + 1]
+            st = " ".join(re.findall(r"style\s*=\s*[\"']([^\"']*)", tag, re.I))
+            classes = set(" ".join(re.findall(r"class\s*=\s*[\"']([^\"']*)", tag, re.I)).split())
+            ids = set(re.findall(r"\bid\s*=\s*[\"']?([\w-]+)", tag, re.I))
+            hidden = bool(HIDE_CSS.search(st) or classes & hid_cls or ids & hid_ids or re.search(r"\shidden\b|aria-hidden", tag, re.I))
+            check_text(t[::-1], where + " (as displayed)", F, hidden=hidden)
             if hidden_instruction(t[::-1]) or hidden_instruction(t):
                 F.add("HIGH", "instruction inside text with a direction override", where, short(t[::-1], 240))
+            elif hidden and len(t.split()) >= 4:  # hidden AND reversed: two layers of concealment around a sentence
+                F.add("HIGH", "hidden text with a direction override (reversed sentence a reader never sees)", where, short(t[::-1], 240))
     css = " ".join(re.findall(r"<style[^>]*>(.*?)</style>", src, re.S | re.I)) + " " + " ".join(re.findall(r"style\s*=\s*[\"']([^\"']*)", src))
     if re.search(r"unicode-bidi\s*:\s*(bidi-override|isolate-override)", css, re.I):
         F.add("MED", "CSS bidi override (display order differs from text order)", where, "")

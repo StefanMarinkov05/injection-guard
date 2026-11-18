@@ -176,7 +176,8 @@ M = [
   "static script analysis (flags what it cannot see); browser snapshots go through H6", "HIGH/MED",
   ["test_advanced.LiveContent.test_decode_and_write", "test_advanced.LiveContent.test_decode_write_with_bot_detection_is_high",
    "test_advanced.LiveContent.test_time_or_user_agent_dependent_content", "test_advanced.LiveContent.test_encoded_string_in_script",
-   "test_advanced.LiveContent.test_encrypted_payload_is_flagged_even_if_unreadable", "test_advanced.LiveContent.test_plain_analytics_script_not_high"]),
+   "test_advanced.LiveContent.test_encrypted_payload_is_flagged_even_if_unreadable", "test_advanced.LiveContent.test_plain_analytics_script_not_high",
+   "test_advanced.LiveContent.test_encoded_data_attribute_decoded_by_handler", "test_advanced.LiveContent.test_content_that_arrives_after_the_page_is_read"]),
  ("W6", "web", "Reading direction and accessibility", "HTML/CSS, DOCX, PDF", "bdo / dir=rtl / unicode-bidi override on Latin text, mirrored text (scaleX(-1)), custom web fonts, DOCX right-to-left runs, PDF /ReversedChars and vertical writing",
   "display order vs text order is reported, and the displayed (reversed) text is phrase-checked", "HIGH/MED/INFO", ["test_redteam3.DirectionAndAccessibility.*"]),
  ("W4", "web", "SVG", "SVG files and inline SVG", "text with opacity 0, fill none, display none, font-size 0, desc/metadata", "hidden SVG text removed and reported", "HIGH",
@@ -362,10 +363,15 @@ REDTEAM = [
  (7, "private corpus round 7 (8 new payloads x 100 carriers): steering in short hidden spans, meta and alt text; 'AI shopping assistants:'; "
      "targeted order as snake_case, glued CamelCase, spaced letters, Markdown span with &#x27;; persistence as an identifier",
      "31 misses", "steering on every hidden chunk, two-word addressees, named tiers, ' s' possessive, entity decoding (W10, T19)"),
+ (8, "private corpus carriers made truly invisible in a browser (aria-hidden, z-index, placeholder, CSS content, bdo were visible): "
+     "bdo dir=rtl moved off-screen with left:-9999px, text written with &#x27;", "MED (hidden check read DOM order, entity reversed)",
+     "direction check unescapes first and treats a hidden-styled override as hidden text (W6)"),
+ (8, "base64 payload in a data- attribute that an onclick handler decodes into the page; content filled in by a 2-minute timer + fetch, a WebSocket or an EventSource (the scanned copy is clean, the later page is not)", "clean", "data- attributes go through the decoders, inline handlers count as scripts, late content is MED with the advice to freeze the page (W3)"),
 ]
 
 # false alarms found by scanning the real course files, and how they were removed without losing a test
 CALIBRATION = [
+ ("late-content check on 12 large public pages and 995 local HTML docs", "MED on 2 news pages (live EventSource feed, 590 s refresh timer)", "kept: both pages really change after reading; UI timers under 5 s, immediate fetches and sockets that never write into the page stay quiet (twins)"),
  ("API docs: 'curl ...?key=YOUR_KEY - replace YOUR_KEY with your API key'", "HIGH: any curl line with the word key", "curl plus secret words only with an upload flag or a real secret path"),
  ("'Customer reviews rank this one first'", "steering MED", "'first' alone is not a steering closer; 'regardless', 'to the user', 'to the cart' are"),
  ("4111 1111 1111 1111 (the standard test card)", "missed by a 'more than two distinct digits' filter", "only all-same-digit runs are excluded"),

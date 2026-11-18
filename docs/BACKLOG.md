@@ -6,6 +6,8 @@ Ordered roughly by value. When you pick one: write the failing test first, then 
 - **Claude's own PDF reader as a 4th parser.** A file built to differ only for it cannot be tested here; raw reads of
   flagged files therefore stay blocked.
 - **Cloaking keyed on IP, cookies, login, time or geography** - `safe-fetch` only varies the user agent.
+- **Content that changes after the scan** (timers, push channels, click handlers): flagged MED statically (W3) and every later tool output is
+  rescanned, but an agent clicking from an old snapshot, or a payload served only to a second request, is not seen until it is read.
 - **Steganography beyond LSB**: JPEG DCT domain (F5, OutGuess), palette order, PNG filter bytes, bits in word/kerning spacing (PDF `TJ` offsets).
 - **Adversarial image perturbations** aimed at vision models (invisible to humans and OCR).
 - **7z / rar** are flagged MED, not unpacked (no extractor on this machine; `py7zr` would be an option).

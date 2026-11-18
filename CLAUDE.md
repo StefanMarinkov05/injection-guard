@@ -12,6 +12,7 @@ packaged as the plugin `injection-guard` in the local marketplace `agent-guard`.
 5. `docs/BACKLOG.md` - known limits and open ideas.
 6. `docs/LAYOUT.md` (folders, public vs private, what the red team does), `docs/MAINTENANCE.md` (release, CI, caches),
    `CONTRIBUTING.md`, `SECURITY.md` (how bypasses are reported).
+7. Red-team work (`redteam/`, private and gitignored): start at `redteam/AGENTS.md`.
 
 ## Non-negotiable rules
 - **Recall over precision.** A false positive costs a review, a miss reaches the agent. An unreadable, ambiguous or

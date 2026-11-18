@@ -128,6 +128,32 @@ class LiveContent(unittest.TestCase):
               "{document.querySelector('main').textContent = new TextDecoder().decode(b)})</script>")
         self.assertIn(self.html(js).verdict(), ("MED", "HIGH"))
 
+    def test_encoded_data_attribute_decoded_by_handler(self):
+        # REDTEAM 2026-11-18: base64 payload in a data- attribute, decoded into the page only on click (static text was clean)
+        p = base64.b64encode(INJ.encode()).decode()
+        attack = (f"<button onclick=\"document.getElementById('n').textContent=atob(this.dataset.p)\" data-p='{p}'>More</button>"
+                  "<p id=n></p>")
+        self.assertEqual(self.html(attack).verdict(), "HIGH")
+        cfg = base64.b64encode(b'{"theme":"dark","lang":"en","items":12}').decode()  # benign twin: encoded widget config
+        twin = f"<button onclick=\"render(JSON.parse(atob(this.dataset.cfg)))\" data-cfg='{cfg}'>Show</button>"
+        self.assertNotEqual(self.html(twin).verdict(), "HIGH")
+
+    def test_content_that_arrives_after_the_page_is_read(self):
+        # REDTEAM 2026-11-18: a timer or push channel fills the page minutes later; the scan of the first copy says nothing
+        late = ("<div id=ad></div><script>setTimeout(()=>fetch('https://ads.example.net/slot').then(r=>r.text())"
+                ".then(t=>{document.querySelector('#ad').innerHTML=t}),120000)</script>")
+        self.assertTrue(has_kind(self.html(late), "arrives after the page is read", "MED"))
+        push = "<script>new WebSocket('wss://x.example.net').onmessage=e=>{document.body.insertAdjacentHTML('beforeend',e.data)}</script>"
+        self.assertTrue(has_kind(self.html(push), "arrives after the page is read", "MED"))
+        sse = "<script>new EventSource('/live').onmessage=e=>{feed.innerHTML+=e.data}</script>"
+        self.assertTrue(has_kind(self.html(sse), "arrives after the page is read", "MED"))
+        # benign twins: an immediate fetch rendered once, a short UI timer, a socket that never writes into the page
+        now = "<script>fetch('/api/items').then(r=>r.json()).then(d=>{list.textContent=d.length+' items'})</script>"
+        ui = "<script>setTimeout(()=>{banner.textContent='Saved'},1500)</script>"
+        ping = "<script>const ws=new WebSocket('wss://x.example.net');ws.onopen=()=>ws.send('hi')</script>"
+        for twin in (now, ui, ping):
+            self.assertFalse(has_kind(self.html(twin), "arrives after the page is read"), twin)
+
     def test_plain_analytics_script_not_high(self):
         self.assertNotEqual(self.html("<script>window.dataLayer=[];function gtag(){dataLayer.push(arguments)}</script>").verdict(), "HIGH")
 
