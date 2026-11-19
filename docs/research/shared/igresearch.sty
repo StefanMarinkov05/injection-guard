@@ -1,13 +1,14 @@
 % igresearch.sty - shared look for the injection-guard paper and the methods documentation.
-% One column, arXiv-like, quiet colours; one accent colour for data, one for "harm".
+% NeurIPS-preprint look: one column, US letter, Times, small-caps title, running header, author-year citations,
+% bold run-in paragraph heads, no paragraph indent. Quiet colours; one accent for data, one for "harm".
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{igresearch}[2026/11/19 injection-guard research style]
 
-\RequirePackage[a4paper,margin=2.5cm]{geometry}
+\RequirePackage[letterpaper,textwidth=5.5in,textheight=9in,top=1in,headheight=12pt,headsep=25pt,footskip=30pt]{geometry}
 \RequirePackage[T1]{fontenc}
-\RequirePackage{lmodern}
+\RequirePackage{amsmath}
+\RequirePackage{newtxtext,newtxmath}
 \RequirePackage{microtype}
-\RequirePackage{amsmath,amssymb}
 \RequirePackage{booktabs,tabularx,array,threeparttable,longtable}
 \RequirePackage{xcolor}
 \RequirePackage{graphicx}
@@ -20,7 +21,7 @@
 \RequirePackage{subcaption}
 \RequirePackage{enumitem}
 \setlist{nosep,leftmargin=*}
-\RequirePackage[numbers,sort&compress]{natbib}
+\RequirePackage[round,sort&compress]{natbib}
 \RequirePackage[hidelinks]{hyperref}
 \RequirePackage{xurl}
 
@@ -33,6 +34,31 @@
 \definecolor{boxbg}{HTML}{F3F6FA}
 \hypersetup{colorlinks,linkcolor=acc,citecolor=acc,urlcolor=acc}
 
+% paragraphs and headings as in the NeurIPS preprint style
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5.5pt}
+\RequirePackage{titlesec}
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{1em}{}
+\titlespacing*{\section}{0pt}{12pt plus 4pt minus 2pt}{6pt plus 2pt}
+\titlespacing*{\subsection}{0pt}{9pt plus 3pt minus 2pt}{4pt plus 1pt}
+\renewcommand{\paragraph}[1]{\par\textbf{#1}\hspace{0.5em}}
+% title block: small caps, centred; \igrunning{} sets the running header shown from page 2
+\RequirePackage{fancyhdr}
+\newcommand{\igrunning}[1]{\def\ig@running{#1}}
+\def\ig@running{}
+\fancypagestyle{igmain}{\fancyhf{}\fancyhead[C]{\small\ig@running}\fancyfoot[C]{\thepage}\renewcommand{\headrulewidth}{0.4pt}}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\thepage}\renewcommand{\headrulewidth}{0pt}}
+\pagestyle{igmain}
+\renewcommand{\maketitle}{\par\begingroup
+  \thispagestyle{plain}
+  \vspace*{0.1in}
+  {\centering{\LARGE\scshape\@title\par}\vspace{0.3in}
+   {\normalsize\begin{tabular}[t]{c}\@author\end{tabular}\par}\vspace{0.12in}
+   {\small\@date\par}}
+  \vspace{0.25in}\endgroup\setcounter{footnote}{0}}
+\renewenvironment{abstract}{\begin{center}{\large\scshape Abstract}\end{center}\vspace{-4pt}
+  \begin{list}{}{\leftmargin=0.5in\rightmargin=0.5in}\item\relax}{\end{list}\vspace{6pt}}
 \renewcommand{\arraystretch}{1.15}
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 \newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
