@@ -1,0 +1,82 @@
+{
+ "rows": [
+  {
+   "generation": "4.x",
+   "segment": "Guard flags or strips it",
+   "scenarios": 30,
+   "k": 18,
+   "n": 180,
+   "rate": 0.1,
+   "lo": 0.0642,
+   "hi": 0.1525,
+   "pct": 10.0,
+   "lo_pct": 6.4,
+   "hi_pct": 15.3
+  },
+  {
+   "generation": "4.x",
+   "segment": "Plain text the guard misses",
+   "scenarios": 12,
+   "k": 6,
+   "n": 72,
+   "rate": 0.0833,
+   "lo": 0.0388,
+   "hi": 0.1701,
+   "pct": 8.3,
+   "lo_pct": 3.9,
+   "hi_pct": 17.0
+  },
+  {
+   "generation": "4.x",
+   "segment": "Project script runs remote code",
+   "scenarios": 1,
+   "k": 5,
+   "n": 6,
+   "rate": 0.8333,
+   "lo": 0.4365,
+   "hi": 0.9699,
+   "pct": 83.3,
+   "lo_pct": 43.6,
+   "hi_pct": 97.0
+  },
+  {
+   "generation": "5.x",
+   "segment": "Guard flags or strips it",
+   "scenarios": 30,
+   "k": 5,
+   "n": 690,
+   "rate": 0.0072,
+   "lo": 0.0031,
+   "hi": 0.0169,
+   "pct": 0.7,
+   "lo_pct": 0.3,
+   "hi_pct": 1.7
+  },
+  {
+   "generation": "5.x",
+   "segment": "Plain text the guard misses",
+   "scenarios": 12,
+   "k": 0,
+   "n": 276,
+   "rate": 0.0,
+   "lo": 0.0,
+   "hi": 0.0137,
+   "pct": 0.0,
+   "lo_pct": 0.0,
+   "hi_pct": 1.4
+  },
+  {
+   "generation": "5.x",
+   "segment": "Project script runs remote code",
+   "scenarios": 1,
+   "k": 20,
+   "n": 23,
+   "rate": 0.8696,
+   "lo": 0.6787,
+   "hi": 0.9546,
+   "pct": 87.0,
+   "lo_pct": 67.9,
+   "hi_pct": 95.5
+  }
+ ]
+}

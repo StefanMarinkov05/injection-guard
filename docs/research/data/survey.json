@@ -1,0 +1,19 @@
+{
+ "rows": [
+  {
+   "verdict": "clean",
+   "files": 47,
+   "real_instruction": 0
+  },
+  {
+   "verdict": "MED",
+   "files": 66,
+   "real_instruction": 0
+  },
+  {
+   "verdict": "HIGH",
+   "files": 6,
+   "real_instruction": 1
+  }
+ ]
+}

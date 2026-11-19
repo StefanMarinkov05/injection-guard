@@ -1,0 +1,81 @@
+{
+ "rows": [
+  {
+   "model": "Haiku 4.5",
+   "rule_only": 9,
+   "final": 10,
+   "runs": 43,
+   "guard_stops": 6
+  },
+  {
+   "model": "Haiku 5.5",
+   "rule_only": 19,
+   "final": 9,
+   "runs": 301,
+   "guard_stops": 3
+  },
+  {
+   "model": "Sonnet 4.5",
+   "rule_only": 9,
+   "final": 10,
+   "runs": 43,
+   "guard_stops": 6
+  },
+  {
+   "model": "Sonnet 4.6",
+   "rule_only": 5,
+   "final": 3,
+   "runs": 43,
+   "guard_stops": 2
+  },
+  {
+   "model": "Sonnet 5",
+   "rule_only": 3,
+   "final": 0,
+   "runs": 43,
+   "guard_stops": 0
+  },
+  {
+   "model": "Sonnet 5.5",
+   "rule_only": 14,
+   "final": 9,
+   "runs": 301,
+   "guard_stops": 2
+  },
+  {
+   "model": "Opus 4.5",
+   "rule_only": 3,
+   "final": 3,
+   "runs": 43,
+   "guard_stops": 2
+  },
+  {
+   "model": "Opus 4.6",
+   "rule_only": 2,
+   "final": 2,
+   "runs": 43,
+   "guard_stops": 1
+  },
+  {
+   "model": "Opus 4.8",
+   "rule_only": 4,
+   "final": 1,
+   "runs": 43,
+   "guard_stops": 1
+  },
+  {
+   "model": "Opus 5",
+   "rule_only": 6,
+   "final": 0,
+   "runs": 43,
+   "guard_stops": 0
+  },
+  {
+   "model": "Opus 5.5",
+   "rule_only": 14,
+   "final": 7,
+   "runs": 301,
+   "guard_stops": 0
+  }
+ ]
+}

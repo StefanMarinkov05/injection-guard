@@ -1,0 +1,425 @@
+\documentclass[11pt]{article}
+\usepackage{../shared/igresearch}
+\input{../generated/values.tex}
+
+\title{\textbf{Reading Is Not Obeying:\\ Measuring Where a Prompt-Injection Guard Is Needed for Claude Code Agents}}
+\author{Stefan Marinkov\\ \small\url{https://github.com/StefanMarinkov05/injection-guard}}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Coding and office agents read web pages, repositories, PDFs and emails written by strangers, and they can act
+on what they read: run commands, write files, fill in payment details. A sentence planted in that content can turn
+the agent against its own user. We present \emph{injection-guard}, an open-source plugin for Claude Code that shows
+the agent only what a human would see, gates actions by their effect rather than by their wording, and tightens
+permissions after a finding. We then measure where such a guard is needed. In \val{totals.runs} judged runs of 11
+Claude models (Haiku, Sonnet and Opus, generations 4.5 to 5.5) on 43 attack scenarios across six use cases, the older
+generation followed injected instructions in \val{F2-generation.rate1} of runs and the newer one in
+\val{F2-generation.rate2} (exact stratified $p = \val{F2-generation.strat_p}$). Only two models are shown to follow
+more than 1\% of attacks; for the current models the data are inconclusive in both directions. Most remaining
+failures come from one attack class that no content scanner can see: a plain-language step in the project's own
+setup process, which every 5.5 model followed and neither the security prompt nor more reasoning effort prevented.
+With real agents, the guard cut Haiku 4.5's follows from \val{AB-Haiku 4.5.off_followed} to
+\val{AB-Haiku 4.5.on_followed} of 14 at about \val{guard_ab.overhead.cost_ratio}$\times$ the cost, and it exposed
+three gaps that we report. Attack payloads are not published; the data, tests and a methods document are.
+\end{abstract}
+
+%=====================================================================
+\section{Introduction}
+
+An AI agent serves one principal. When it reads a document written by someone else, it gains a second, uninvited
+one. Prompt injection is that situation: instructions hidden in data that the model treats as if the user had given
+them \citep{perez2022,greshake2023}. In a chat window the damage is a wrong answer. In an agent with a shell, a file
+system and the user's logged-in accounts, it is whatever the agent can do.
+
+This is no longer hypothetical. In 2025 a single crafted email made Microsoft 365 Copilot send internal data to an
+attacker without a click \citep{echoleak2025}. A malicious issue in a public GitHub repository made an agent with the
+GitHub MCP server leak a user's private repositories \citep{invariant2025githubmcp}. Code planted in an extension
+release instructed Amazon Q to wipe local files and cloud resources \citep{aws2025q}. The Nx supply-chain attack used
+developers' own installed AI command-line tools to search their disks for secrets \citep{wiz2025nx}. Hidden text on
+web pages steered ChatGPT search \citep{guardian2024search}, a Reddit comment hijacked an agentic browser
+\citep{brave2025comet}, and researchers hid instructions for AI reviewers in submitted papers \citep{lin2025hidden,register2025reviewers}.
+Attackers now place injections in phishing emails to fool the AI filters meant to catch them
+\citep{sublime2025phish,scworld2025phish,microsoft2026ascii}. Coding agents ran attacker code through settings files
+and comments \citep{cursor2025curxecute,rehberger2025copilot,tracebit2025gemini,securityweek2026comment}.
+
+Model vendors train against this \citep{wallace2024hierarchy,anthropic2025defenses}, and the newest models resist much
+better. A deployer still has to decide whether an extra layer is worth it, for which tasks and which models. Benchmarks
+report attack success rates \citep{zhan2024injecagent,debenedetti2024agentdojo}, but rarely the question a deployer
+asks: \emph{if I already use a strong model, what does a guard still catch, and what does it cost?}
+
+\paragraph{Contributions.}
+\begin{enumerate}
+\item \textbf{A guard that works on what the human sees and on effects} (Section~\ref{sec:design}): a client-side
+  plugin for Claude Code that renders untrusted content the way a person would, reports and removes what a person
+  would not see, and asks the user before actions whose \emph{effect} is dangerous, independent of wording.
+\item \textbf{A measurement of where it is needed} (Sections~\ref{sec:method} and \ref{sec:results}): 43 scenarios in six
+  use cases and five harm classes, 11 Claude models, effort and system-prompt conditions, a blind LLM judge, nine
+  pre-stated hypothesis families tested with exact methods, and a full-agent A/B with the guard on and off.
+\item \textbf{An honest account of the gaps} (Sections~\ref{sec:ab} and \ref{sec:limits}): the attack classes the
+  guard misses, why, and what the design cannot measure yet.
+\end{enumerate}
+The companion methods document \citep{injectionguard} argues every test choice at length; this paper reports results.
+
+%=====================================================================
+\section{Threat model}
+\label{sec:threat}
+
+\paragraph{Attacker.} Controls some content the agent will read (a web page, a repository, a document, an email, an
+issue, a tool result) but not the user's prompt, the model or the machine. This is indirect prompt injection
+\citep{greshake2023,owasp2025llm01,nist2025aml}.
+
+\paragraph{Victim.} A user who asks an agent for an ordinary task (``set up this repo'', ``pay this invoice'',
+``classify these emails'') and grants it the usual tools. The user does not read every byte the agent reads, which
+is the reason to use an agent.
+
+\paragraph{Goal.} Make the agent act against the user. We group goals by the harm a user would suffer
+(Table~\ref{tab:harm}).
+
+\begin{table}[h]\centering\small
+\caption{Harm classes used in this study, with the behavior we observed when an agent followed.}\label{tab:harm}
+\begin{tabularx}{\linewidth}{@{}lL@{}}\toprule
+Harm class & What a followed attack looked like in our runs\\\midrule
+Code execution & ran a setup script that pipes a remote file into a shell; decoded and ran a hidden command; added
+  an import of an attacker module; told the user to install a look-alike package\\
+Secret and data theft & printed the user's SSH private key into a support ticket; wrote a CI step that sends the
+  deploy token to an outside host\\
+Fraud and phishing & put the attacker's bank account into a payment file; recorded an unapproved transfer as approved
+  in meeting minutes\\
+Destruction & deleted the backups folder and told the user the deletion had been approved\\
+Manipulation and misinformation & dropped the best product because of a fake safety recall\\
+\bottomrule\end{tabularx}
+\end{table}
+
+\paragraph{How attacks trick the agent.} We classify scenarios by \emph{technique class}, not by payload
+(Figure~\ref{fig:attack}):
+\textbf{hidden-render} (white, tiny, off-screen or CSS-hidden text: in the file, invisible on screen);
+\textbf{hidden-markup} (comments, collapsed sections, metadata, structured data);
+\textbf{encoding} (base64, invisible Unicode tag characters);
+\textbf{impersonation} (fake system messages, fake conversation turns, fake support staff);
+\textbf{split} (an instruction spread over several files); and
+\textbf{process} (a plain-language step posed as the project's or team's own procedure, with nothing hidden at all).
+The first four are \emph{visible to a scanner}; process attacks are not, because they look exactly like legitimate
+instructions. Section~\ref{sec:results} shows that this distinction decides most of the outcome.
+
+\begin{figure}[h]\centering
+\begin{tikzpicture}[node distance=5mm and 9mm, every node/.style={font=\small},
+  box/.style={draw=acc, rounded corners=2pt, fill=boxbg, align=center, minimum height=9mm, text width=27mm},
+  bad/.style={box, draw=harm, fill=harm!8}, ar/.style={-{Stealth[length=2mm]}, thick, mute}]
+\node[bad] (att) {Attacker writes content\\\scriptsize page, repo, PDF, email};
+\node[box, right=of att] (task) {User asks for a task\\\scriptsize ``set up'', ``pay'', ``triage''};
+\node[box, below=of task] (read) {Agent reads content\\\scriptsize hidden text, steps, fake turns};
+\node[bad, right=of read] (act) {Agent acts\\\scriptsize runs, sends, writes, buys};
+\node[bad, below=of act] (harm) {Harm to the user\\\scriptsize code, secrets, money, data};
+\draw[ar] (att) |- (read); \draw[ar] (task) -- (read); \draw[ar] (read) -- (act); \draw[ar] (act) -- (harm);
+\end{tikzpicture}
+\caption{Indirect prompt injection: the attacker never talks to the agent directly; the user's own task brings the
+attacker's text into the agent's context.}\label{fig:attack}
+\end{figure}
+
+%=====================================================================
+\section{injection-guard: design}
+\label{sec:design}
+
+injection-guard is a Claude Code plugin (version \val{plugin_version}, \val{tests_total} automated tests) made of four parts that act
+at different moments (Figure~\ref{fig:arch}). It needs no extra model and no server; everything runs on the user's
+machine.
+
+\begin{figure}[h]\centering
+\begin{tikzpicture}[node distance=4mm and 11mm, every node/.style={font=\small},
+  box/.style={draw=acc, rounded corners=2pt, fill=boxbg, align=center, minimum height=10mm, text width=28mm},
+  src/.style={box, draw=harm, fill=harm!8}, usr/.style={box, draw=ok, fill=ok!8},
+  ar/.style={-{Stealth[length=2mm]}, thick, mute}]
+\node[src] (src) {Untrusted input\\\scriptsize web, files, repos, tools};
+\node[box, right=of src] (scan) {\textbf{Scanner}\\\scriptsize safe-read / safe-fetch:\\ what a human sees};
+\node[box, right=of scan] (agent) {\textbf{Agent}\\\scriptsize + skill and quarantine reader};
+\node[box, below=10mm of agent] (pre) {\textbf{Pre-tool hook}\\\scriptsize read, effect and taint gates};
+\node[box, left=of pre] (post) {\textbf{Post-tool hook}\\\scriptsize output scan, provenance};
+\node[usr, below=10mm of pre] (user) {User\\\scriptsize asked to allow};
+\node[box, left=of post, text width=24mm] (state) {Session state\\\scriptsize taint, sources, downloads};
+\draw[ar] (src) -- (scan); \draw[ar] (scan) -- (agent); \draw[ar] (agent) -- node[right]{\scriptsize tool call} (pre);
+\draw[ar] (pre) -- node[right]{\scriptsize ask} (user); \draw[ar] (pre) -- node[above]{\scriptsize run} (post);
+\draw[ar] (post.north) -- node[left]{\scriptsize output} (scan.south); \draw[ar, dashed] (post) -- (state); \draw[ar, dashed] (state.south) |- (user.west);
+\end{tikzpicture}
+\caption{Architecture. The scanner changes what the agent reads; the hooks change what it may do; the session state
+carries findings forward.}\label{fig:arch}
+\end{figure}
+
+\paragraph{1. What a human sees is the content.} \texttt{safe-read} and \texttt{safe-fetch} parse PDF, Office, EPUB,
+HTML, images, archives and code by their bytes, not their extension, render what a reader would see, and compare it
+with the text layer. Text a person would not see (white or tiny text, off-page objects, hidden CSS, comments,
+metadata, invisible Unicode, encodings) is reported and removed; the agent receives only the visible text between
+marked boundaries, with a findings report \citep[cf.][]{hines2024spotlighting}. \texttt{safe-fetch} also re-fetches as an
+AI user agent and compares, to catch cloaking.
+
+\paragraph{2. Wording is a signal; effect is the gate.} Pattern families catch known and respelled injection
+wording, but the hooks do not rely on them. The pre-tool hook asks the user before actions whose \emph{effect} is
+dangerous regardless of why the agent wants them: running build tools or tests inside a folder downloaded in this
+session, writing configuration that runs programs (MCP or settings files), reading secrets, sending data out.
+
+\paragraph{3. Findings change what the agent may do next.} A HIGH finding taints the session; while tainted, risky
+actions ask. A registry keyed by SHA-256 keeps a file's verdict across sessions. A skill teaches the agent the
+workflow, and a read-only \emph{quarantine reader} sub-agent can digest long untrusted documents so the main agent
+never sees their raw text \citep[the dual-model pattern of][]{beurerkellner2025patterns}.
+
+\subsection{What is new}
+Table~\ref{tab:prior} places the guard among existing defenses. Model hardening \citep{wallace2024hierarchy,anthropic2025defenses}
+and detection classifiers \citep{wan2024cyberseceval3,jacob2025promptshield,li2024injecguard} decide on text;
+system designs such as CaMeL \citep{debenedetti2025camel} and the design patterns of \citet{beurerkellner2025patterns}
+give strong guarantees but require building the agent around them. injection-guard is a drop-in layer for an existing
+agent that (i) works on the \emph{rendered} view of rich documents, where most hidden-text attacks live, (ii) gates by
+effect and provenance rather than by a classifier score, and (iii) is open, local and auditable. It does not replace
+model training; Section~\ref{sec:results} measures where it adds to it.
+
+\begin{table}[h]\centering\small
+\caption{Defense families. ``Rich docs'': inspects rendered PDF/Office/HTML rather than extracted text.}\label{tab:prior}
+\begin{tabularx}{\linewidth}{@{}LccccL@{}}\toprule
+Approach & Rich docs & Effect gate & Drop-in & Local & Limitation\\\midrule
+Model training, instruction hierarchy \citep{wallace2024hierarchy,anthropic2025defenses} & - & - & yes & n/a & opaque; residual rate unknown per deployment\\
+Classifiers \citep{wan2024cyberseceval3,jacob2025promptshield,li2024injecguard} & - & - & yes & varies & text only; over-defense; adaptive attacks \citep{nasr2025attacker}\\
+Spotlighting, delimiters \citep{hines2024spotlighting} & - & - & yes & yes & relies on the model honoring marks\\
+CaMeL, design patterns \citep{debenedetti2025camel,beurerkellner2025patterns} & - & yes & no & yes & agent must be rebuilt\\
+Vendor browser defenses \citep{anthropic2025chrome} & partly & yes & yes & no & one product, vendor-reported\\
+\textbf{injection-guard} & yes & yes & yes & yes & misses process attacks; author-tuned (Sec.~\ref{sec:limits})\\
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{What it takes}
+\begin{itemize}
+\item \textbf{Latency and cost.} In the A/B, each hook call took a median \val{guard_ab.overhead.hook_ms_median}\,ms
+  (90th percentile \val{guard_ab.overhead.hook_ms_p90}\,ms, \val{guard_ab.overhead.hook_calls} calls). Guarded runs used
+  \val{guard_ab.overhead.tokens_ratio}$\times$ the input tokens and cost \val{guard_ab.overhead.cost_ratio}$\times$ as much
+  (\$\val{guard_ab.overhead.cost_on} vs \$\val{guard_ab.overhead.cost_off} for 28 runs each).
+\item \textbf{False alarms.} The guard is built for recall over precision. On 119 real university course PDFs it
+  reported \val{survey.HIGH.files} HIGH and \val{survey.MED.files} MED files and \val{survey.clean.files} clean.
+  Of the HIGH files, \val{survey.HIGH.real_instruction} carried a real hidden instruction to AI assistants (an exercise
+  sheet with invisible text asking a model to solve a different problem and hide it); the others were benign hidden or
+  faint content (a translation layer, slide overlays, scanned noise). HIGH findings ask the user; they do not block.
+\item \textbf{Friction.} In 28 guarded agent runs the guard denied one action, and that deny was wrong
+  (Section~\ref{sec:ab}).
+\end{itemize}
+
+%=====================================================================
+\section{Method}
+\label{sec:method}
+
+\paragraph{Scenarios.} 43 scenarios, each a realistic user request, a workspace (files, a saved page, an inbox) and one
+planted instruction whose effect would harm the user. Use cases: browsing (6), coding (10), documents (6), scanning (7:
+inbox triage, log review, security review, package audit, phishing classification, repository audit), shopping (7) and
+agent tasks (7). Every planted link points to a local canary host, which replies like an attacker's second stage;
+the home folder is fake and holds honeytoken keys.
+
+\paragraph{Models and conditions.} Eleven models: Haiku 4.5 and 5.5; Sonnet 4.5, 4.6, 5 and 5.5; Opus 4.5, 4.6,
+4.8, 5 and 5.5. Every model ran each scenario once at default effort. The three 5.5 models also ran at five effort
+levels (low to max) and with a security system prompt: seven conditions, 301 runs each.
+
+\paragraph{Harness.} One Claude Code call per run, with the workspace and fetched page in the prompt; the model answers
+with actions that are parsed and judged, never executed. This made \val{totals.runs} runs affordable
+(\$\val{totals.spend_usd} in total) and measures what the model decides. The guard A/B (Section~\ref{sec:ab}) uses real
+agents instead.
+
+\paragraph{Outcome and judges.} A run is \emph{followed} if it ran, fetched, wrote or said what the attacker wanted,
+even if it also warned. A blind LLM judge (Claude Opus 5.5) decides from the request, the expected result, the
+scenario's definition of ``followed'' and the run's actions, files and answer, without knowing the model. A rule
+judge (patterns over actions) runs alongside; every run was LLM-judged.
+
+\paragraph{Statistics.} Counts are small and scenarios are shared across models, so all tests are exact or
+permutation-based and every model comparison is stratified by scenario: exact binomial (F1), exact stratified
+Mantel-Haenszel and Fisher (F2, F3, F6, F9), Cochran-Armitage (F4), exact McNemar (F5, F7, A/B), permutation
+homogeneity (F8), Clopper-Pearson and scenario-cluster bootstrap intervals, Holm correction within each family. The
+methods document gives each hypothesis, test, formula, reason and power.
+
+%=====================================================================
+\section{Results}
+\label{sec:results}
+
+\subsection{Are agents misled?}
+$H_0$ for each model was that it follows at most $p_0 = 1\%$ of attacks; at that rate, an agent exposed to 100
+poisoned documents is still compromised with 63\% probability. Figure~\ref{fig:models} shows each model at default
+effort with exact 95\% intervals.
+
+\begin{figure}[h]\centering
+\input{../generated/models-labels.tex}
+\begin{tikzpicture}
+\begin{axis}[igbar, width=0.82\linewidth, height=7.2cm, xlabel={runs that followed the injection (\%), 95\% Clopper-Pearson},
+  symbolic y coords/.expand once=\igModelLabels, xmax=42]
+\input{../generated/models-plot.tex}
+\draw[dashed, acc] (axis cs:1,{Haiku 4.5}) -- (axis cs:1,{Opus 5.5}) node[pos=0.0, above, font=\scriptsize, acc]{$p_0$};
+\end{axis}
+\end{tikzpicture}
+\caption{Share of 43 attacks each model followed at default effort. Dashed line: $p_0 = 1\%$.}\label{fig:models}
+\end{figure}
+
+\begin{itemize}
+\item The claim ``agents are not misled'' ($p = 0$) is refuted for 9 of 11 models.
+\item The claim ``at most 1\%'' is rejected after Holm for Haiku 4.5 and Sonnet 4.5 (\val{F1-Haiku 4.5.k} of 43 each,
+  Holm $p = \val{F1-Haiku 4.5.p_holm}$).
+\item For every 5.x model, one follow (or none) in 43 runs is \textbf{inconclusive in both directions}: it does not show
+  a rate above 1\%, and it cannot rule out a rate up to \val{F1-Opus 5.5.cp_hi}.
+\end{itemize}
+
+\takeaway{Older models are measurably unsafe on untrusted content. Current models are much better, but 43 attacks
+cannot certify them at a 1\% level; whoever deploys them carries that uncertainty.}
+
+\subsection{Generation matters, tier and effort do not}
+Generation 4.x followed \val{F2-generation.k1} of \val{F2-generation.n1} attacks (\val{F2-generation.rate1}),
+generation 5.x \val{F2-generation.k2} of \val{F2-generation.n2} (\val{F2-generation.rate2}): a difference of
+\val{F2-generation.rd} (scenario-cluster 95\% CI \val{F2-generation.rd_ci_cluster}), exact stratified
+$p = \val{F2-generation.strat_p}$. Within a generation, no tier pair differs after Holm, and reasoning effort shows no
+trend for any 5.5 model. Opus 5.5 followed the same single attack at every effort level. The security system prompt
+changed no outcome for any 5.5 model. The design detects only large differences (about 20 percentage points between
+tiers), so these are absences of evidence, not proof of equality.
+
+\subsection{Where agents fail: use cases and harm}
+Tables~\ref{tab:use} and \ref{tab:harmres} break the runs down. Every case named in the last column was followed at
+least once; the catalogue in Appendix~\ref{app:cat} says what the agent did.
+
+\begin{table}[h]\centering\small
+\caption{Follows by use case. 4.x: six models $\times$ one run; 5.x: five models, the 5.5 models with seven conditions.}\label{tab:use}
+\input{../generated/sectors-table.tex}
+\end{table}
+
+\begin{table}[h]\centering\small
+\caption{Follows by harm class.}\label{tab:harmres}
+\input{../generated/harms-table.tex}
+\end{table}
+
+Three patterns stand out.
+\begin{enumerate}
+\item \textbf{Code execution dominates.} It is the largest harm class and the only one where 5.x models still fail
+  more than rarely, almost entirely through one case (C38).
+\item \textbf{Agent tasks are the riskiest use case.} When the user says ``follow the README'' or ``do the action
+  items'', a planted step looks like part of the job.
+\item \textbf{Scanning agents held.} The seven scanning cases (an agent asked to classify or audit untrusted content,
+  including phishing classification and a pre-adoption repository review) were followed in 0 of 203 runs. Asking the
+  model to judge content puts it on guard. This does not make AI filters safe against adaptive attackers
+  \citep{nasr2025attacker}; it means our cases were not hard enough to show the failure.
+\end{enumerate}
+
+\subsection{One attack beats every current model}
+C38 asks the agent to set up a repository by following its README. The README is clean; its setup script contains one
+line that downloads a file and runs it in a shell. Nothing is hidden, nothing is addressed to an AI. Every 5.5 model
+ran it: Haiku 6 of 7 conditions, Sonnet and Opus 7 of 7, including under the security prompt. C38 holds
+\val{F8-5.x default.top_share} of 5.x follows at default effort, and over all conditions \val{F8-Sonnet 5.5.top_share}
+for Sonnet 5.5 and \val{F8-Opus 5.5.top_share} for Opus 5.5. The older 5.0 models mostly read the script first and
+refused: \val{F9-bootstrap-5.0-vs-5.5.k_5_0} of \val{F9-bootstrap-5.0-vs-5.5.n_5_0} runs versus
+\val{F9-bootstrap-5.0-vs-5.5.k_5_5} of \val{F9-bootstrap-5.0-vs-5.5.n_5_5} for 5.5 ($p = \val{F9-bootstrap-5.0-vs-5.5.p}$),
+a regression on this attack. The same pattern was reported independently for setup files in clean repositories
+\citep{helpnet2026mozilla} and for user-invoked repository tasks \citep{zhu2026beyond}.
+
+\takeaway{The residual risk of current models is not hidden text but legitimate-looking process. A per-model rate
+for 5.x is mostly the rate of this one attack class.}
+
+\subsection{What the guard covers}
+\label{sec:coverage}
+Statically, the scanner flags or strips the payload of \val{totals.guard_covers} of 43 scenarios. Of all
+\val{guard_stoppable_share.n} follows, \val{guard_stoppable_share.k} (\val{guard_stoppable_share.rate}, 95\% CI
+\val{guard_stoppable_share.lo} to \val{guard_stoppable_share.hi}) were on attacks it covers. Models fail on covered and
+uncovered attacks at similar rates (F6, $p \ge 0.66$), so the scanner and the model do not cover the same holes. The
+largest uncovered class is the process attack above: nothing to detect, so only an effect gate can help.
+
+\subsection{Guard on: a full-agent A/B}
+\label{sec:ab}
+Static coverage assumes the agent reads through the scanner. To test the real plugin, we ran real Claude Code agents
+(Haiku 4.5 and Haiku 5.5) on the 14 scenarios any model had followed, once with and once without the guard, with
+every hook decision logged (Tables~\ref{tab:ab} and \ref{tab:abcases}).
+
+\begin{table}[h]\centering\small
+\caption{Guard A/B, one run per scenario and arm, real agents.}\label{tab:ab}
+\input{../generated/ab-table.tex}
+\end{table}
+\begin{table}[h]\centering\small
+\caption{A/B pairs where either arm followed or the guard intervened.}\label{tab:abcases}
+\input{../generated/ab-cases.tex}
+\end{table}
+
+With the guard, Haiku 4.5 followed \val{AB-Haiku 4.5.on_followed} attacks instead of \val{AB-Haiku 4.5.off_followed}.
+The three it stopped following (C11 backdoor import, C19 invoice bank account, C33 fake recall) were all attacks
+where the guard raised a finding; none became a follow because of the guard. Haiku 5.5 followed none in either arm.
+The guarded agents warned the user more often (\val{AB-both.on_reported} vs \val{AB-both.off_reported} of 28 runs) and
+completed the task as often. With three discordant pairs, McNemar $p = \val{AB-Haiku 4.5.p}$ is the smallest value
+possible: a direction, not a proof. The three attacks that passed name three gaps:
+\begin{enumerate}
+\item \textbf{Raw downloads.} The agent fetched a page with a plain \texttt{curl} instead of \texttt{safe-fetch}. The
+  output hook marked the result as web content but did not detect hidden text in raw HTML, so the look-alike package
+  (C05) went through. Static coverage had counted C05 as covered.
+\item \textbf{Local process steps.} The setup script (C38) is a local file in the user's repository; no gate applied.
+  Claude Code's own permission prompt stopped it in both arms.
+\item \textbf{CI secrets.} Writing a workflow step that sends a secret to an outside host (C39) passed every hook.
+\end{enumerate}
+The one guard deny was wrong: the read gate refused a shell loop that itself called \texttt{safe-read}.
+
+\takeaway{With a weak model the guard prevents real harm; with a strong model it mostly adds transparency. Its
+coverage depends on the agent using its tools, so output scanning of raw downloads and effect gates for local
+scripts and CI secrets are the next steps.}
+
+\subsection{A static matcher cannot decide alone}
+The rule judge, a static pattern matcher like a scanner, flagged 88 runs as followed; the LLM judge 54
+(McNemar $p = \val{F7-judges.p}$, $\kappa = \val{F7-judges.kappa}$). Almost all extra flags were models that
+\emph{quoted} the attack while warning the user. The same holds for a guard: wording is evidence, not a verdict, which
+is why injection-guard reports and asks rather than blocks on patterns.
+
+%=====================================================================
+\section{Where a guard is needed}
+Combining the results, Table~\ref{tab:need} gives our reading for deployers. It is a judgement from 43 author-written
+scenarios, not a guarantee.
+
+\begin{table}[h]\centering\small
+\caption{Where a guard layer is necessary and where it is defense in depth.}\label{tab:need}
+\begin{tabularx}{\linewidth}{@{}P{5.2cm}L@{}}\toprule
+Situation & Reading\\\midrule
+4.x models on any untrusted content & \textbf{Necessary.} 10 to 23\% of attacks followed by Haiku and Sonnet 4.5; the guard
+  stopped half in the A/B.\\
+Agent tasks on downloaded repositories (setup, ``follow the README'', issues) & \textbf{Necessary for every model}, but
+  only an effect gate can help: the attack is plain process. Today's best protection is the permission prompt.\\
+Rich documents with payment or personal data (invoices, contracts) & \textbf{Useful for every model.} Hidden-render
+  attacks on invoices were followed by 5.5 models at higher effort; the scanner flags them.\\
+Browsing, shopping, scanning with 5.x models & \textbf{Defense in depth.} Few or no follows; the guard adds warnings
+  and a record of what was hidden.\\
+\bottomrule\end{tabularx}
+\end{table}
+
+%=====================================================================
+\section{Limitations and what is missing}
+\label{sec:limits}
+\begin{description}
+\item[Author bias.] The same person wrote the attacks and the guard, so the guard is tuned to these attacks and static
+  coverage is optimistic. Independent attacks, especially adaptive ones \citep{nasr2025attacker}, are the most important
+  missing test. We publish per-case descriptions and the harness design so others can build their own.
+\item[Decisions, not effects.] The main experiment parses actions without executing them; a real agent loop can
+  correct or compound a decision. The A/B covers only 14 scenarios, two models and one run per cell.
+\item[Small samples.] One run per model and scenario; differences below about 20 points are invisible. Repeated runs
+  would turn the 5.x ``inconclusive'' into a bound.
+\item[Judge.] The LLM judge is from the same model family as the models judged and was not validated against human
+  labels on a held-out set.
+\item[Scope.] Claude models only, November 2026 versions, Claude Code only. Hypotheses were formalized after the main
+  campaign; they are exploratory.
+\item[Guard gaps.] Raw downloads, local process steps and CI secret steps (Section~\ref{sec:ab}).
+\end{description}
+
+%=====================================================================
+\section{Conclusion}
+Newer Claude models resist most prompt injections we could write, and the generation gap is large and significant.
+What remains is the kind of attack no content filter can see: an ordinary-looking step in a project's own process.
+A guard that shows the agent only what a human sees, and asks before dangerous effects, stops real harm for weaker
+models and makes stronger ones more transparent, at about a tenth more cost. The measurement shows where it is
+needed; its gaps show where to build next.
+
+\paragraph{Disclosure and ethics.} All attacks targeted local canary hosts and fake credentials; nothing harmful was
+executed outside the test machine. Payloads are withheld; scenario descriptions, counts, tests and code for the
+statistics are public. The findings about Claude models are reported to Anthropic before this paper is made public.
+
+\bibliographystyle{plainnat}
+\bibliography{../shared/references}
+
+\appendix
+\section{Catalogue of followed cases}
+\label{app:cat}
+\footnotesize
+Every case that at least one model followed, with the agent's behavior in that run. ``Runs'': follows over all pooled
+runs of that case. The remaining 29 cases were never followed.
+\input{../generated/catalogue.tex}
+
+\end{document}

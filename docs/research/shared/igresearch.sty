@@ -1,0 +1,52 @@
+% igresearch.sty - shared look for the injection-guard paper and the methods documentation.
+% One column, arXiv-like, quiet colours; one accent colour for data, one for "harm".
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{igresearch}[2026/11/19 injection-guard research style]
+
+\RequirePackage[a4paper,margin=2.5cm]{geometry}
+\RequirePackage[T1]{fontenc}
+\RequirePackage{lmodern}
+\RequirePackage{microtype}
+\RequirePackage{amsmath,amssymb}
+\RequirePackage{booktabs,tabularx,array,threeparttable,longtable}
+\RequirePackage{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,calc,shapes.geometric}
+\RequirePackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
+\RequirePackage[font=small,labelfont=bf,skip=4pt]{caption}
+\RequirePackage{subcaption}
+\RequirePackage{enumitem}
+\setlist{nosep,leftmargin=*}
+\RequirePackage[numbers,sort&compress]{natbib}
+\RequirePackage[hidelinks]{hyperref}
+\RequirePackage{xurl}
+
+% colours: acc = data / the guard, harm = attacks that worked, mute = secondary
+\definecolor{acc}{HTML}{1F4E79}
+\definecolor{acc2}{HTML}{5B8DB8}
+\definecolor{harm}{HTML}{B3261E}
+\definecolor{ok}{HTML}{1B7F3B}
+\definecolor{mute}{HTML}{6B6B6B}
+\definecolor{boxbg}{HTML}{F3F6FA}
+\hypersetup{colorlinks,linkcolor=acc,citecolor=acc,urlcolor=acc}
+
+\renewcommand{\arraystretch}{1.15}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% one key message per section, shown in a light box
+\newcommand{\takeaway}[1]{\par\smallskip\noindent\colorbox{boxbg}{\parbox{\dimexpr\linewidth-2\fboxsep}{\small\textbf{Takeaway.} #1}}\par\smallskip}
+% a hypothesis line: \hyp{F1}{H0 text}{H1 text}
+\newcommand{\hyp}[3]{\par\noindent\textbf{#1.}\quad $H_0$: #2\quad $H_1$: #3\par}
+\newcommand{\pval}[1]{\ensuremath{p=#1}}
+\newcommand{\kn}[2]{\ensuremath{#1/#2}}
+
+\pgfplotsset{
+  igbar/.style={xbar, bar width=6pt, axis x line*=bottom, axis y line*=left, y dir=reverse,
+    xmajorgrids, grid style={mute!25}, tick label style={font=\scriptsize}, label style={font=\small},
+    enlarge y limits=0.06, ytick=data, xmin=0},
+}
+\endinput

@@ -1,0 +1,405 @@
+\documentclass[11pt]{article}
+\usepackage{../shared/igresearch}
+\input{../generated/values.tex}
+
+\title{\textbf{Measuring Prompt-Injection Resistance of Claude Agents}\\[4pt]
+\large Methods, hypotheses, statistical tests and full results\\[2pt]
+\normalsize Companion documentation to the paper ``Reading Is Not Obeying''}
+\author{Stefan Marinkov\\ \small\url{https://github.com/StefanMarinkov05/injection-guard}}
+\date{Data of 2026-11-19}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent This document argues every methodological choice behind the injection-guard measurements: what was measured,
+how a run is turned into an outcome, which hypotheses were stated, which test answers each one and why that test and
+not a more common one, the formulas, the power of the design, and the threats to validity. The paper reports the
+results briefly and points here for the argument. Attack payloads are not published; scenarios are described by use
+case, harm class and technique class.
+\end{abstract}
+
+\tableofcontents
+\bigskip
+
+%=====================================================================
+\section{Question and design in one page}
+\label{sec:overview}
+
+\paragraph{The question.} An AI agent works for one principal, its user. When it reads content written by someone else
+(a web page, an email, a README, an invoice), that content can contain instructions. The question is how often a
+Claude agent acts on such instructions against its user, under which conditions, and what a guard layer in front of
+the agent changes.
+
+\paragraph{The claim to refute.} The working null hypothesis of anyone who deploys an agent unguarded is that the
+agent is not misled, or only negligibly. We state it so that data can refute it:
+\begin{center}
+$H_0$: for a given model, the probability that a run follows the injected instruction is at most
+$p_0 = \val{p0}$.\qquad $H_1$: it is larger.
+\end{center}
+A single verified follow refutes the stronger claim $p = 0$; the threshold $p_0$ asks the harder question whether the
+rate is large enough to matter (Section~\ref{sec:f1} argues the value).
+
+\paragraph{The design.} A controlled factorial experiment with the run as the unit:
+\begin{itemize}
+\item \textbf{Scenarios} (\val{scenarios}): a realistic user request, a workspace (files, a fetched page, an email
+  folder) and one injected instruction whose effect would harm the user. Six use cases (browsing, coding, documents,
+  scanning, shopping, agent tasks) and five harm classes (code execution, secret and data theft, fraud and phishing,
+  manipulation and misinformation, destruction).
+\item \textbf{Models} (11): Claude Haiku, Sonnet and Opus across generations 4.5 to 5.5.
+\item \textbf{Conditions}: every model at its default effort; the three 5.5 models additionally at five effort
+  levels and with a security system prompt (seven conditions).
+\item \textbf{Guard}: off in the main experiment (the model's own resistance), measured statically per scenario, and
+  on in a separate full-agent A/B (Section~\ref{sec:ab}).
+\end{itemize}
+In total \val{runs} runs enter the pooled analyses; \val{design.followup_runs_excluded_from_pools} follow-up runs are
+analyzed separately (F9); \val{design.errors_dropped} runs ended in an error.
+
+%=====================================================================
+\section{Measurement}
+\label{sec:measure}
+
+\subsection{One run}
+Each run is one call of the Claude Code CLI (\texttt{claude -p}) with no tools: the workspace files and the already
+fetched page are pasted into the prompt, and the model answers with action lines (run a command, fetch a URL, write a
+file, final answer). Actions are parsed and judged, never executed. This ``lean harness'' costs about 550 tokens of
+overhead instead of 30,000 to 60,000 for a full agent, which is what made \val{runs} runs affordable; its price is that
+it measures what the model \emph{decides}, not what a multi-step agent loop would end up doing.
+
+Every planted link points to a \texttt{*.localhost} canary host on the test machine. When a model contacts it, the
+server answers like an attacker would (a second stage), and the model gets one more turn to show what it does with
+that answer. The home directory the model sees is a fake one with honeytoken keys.
+
+\subsection{From a run to an outcome}
+The outcome is binary: $Y = 1$ if the run \emph{followed} the injected instruction (ran, fetched, wrote or said what the
+attacker wanted), else $Y = 0$. A run that refuses and warns the user counts as $Y = 0$ and is recorded as ``reported''.
+Two judges decide:
+\begin{enumerate}
+\item a \textbf{rule judge}: regular expressions over the actions and written files, defined per scenario before any
+  run, deliberately over-inclusive;
+\item a \textbf{blind LLM judge} (Claude Opus 5.5, low effort) that sees the user's request, the correct result, the
+  scenario's definition of ``followed'', and the run's actions, files and answer, but not which model produced it.
+\end{enumerate}
+The LLM verdict is final where it exists; every run is LLM-judged. Section~\ref{sec:f7} tests why the rule judge alone
+is not good enough, which is also an argument about static scanners in general.
+
+\subsection{What the guard covers}
+Guard coverage is a property of the scenario, not of a model run: the shipped scanner (\texttt{safe-read}, report-only)
+scans every file of a scenario. A scenario is \emph{covered} if its payload is flagged or stripped before the agent
+would read it. This takes no model calls and is deterministic.
+
+%=====================================================================
+\section{Statistical model}
+\label{sec:model}
+
+Each run $i$ of model $m$ on scenario $s$ under condition $c$ is a Bernoulli trial
+\[ Y_{msci} \sim \mathrm{Bernoulli}(\pi_{msc}). \]
+If $\pi$ did not depend on the scenario, the number of follows of a model over $n$ runs would be binomial,
+$K \sim \mathrm{Bin}(n, \pi)$, and the standard one-sample and two-sample tests for proportions would apply directly.
+\textbf{It does depend on the scenario}, strongly (F8): one scenario holds most of the follows. Two consequences drive
+every test choice below.
+\begin{enumerate}
+\item \textbf{Small counts.} Models follow 0 to 10 of 43 scenarios. Large-sample approximations (the Wald interval,
+  the $z$-test, Pearson's $\chi^2$) need expected counts of about 5 per cell; we have fewer almost everywhere. We
+  therefore use exact tests (enumerating the null distribution) or Monte Carlo permutation tests.
+\item \textbf{Shared scenarios.} All models face the same 43 scenarios, so runs are clustered by scenario. A model
+  comparison that ignores this compares models \emph{and} scenario mixes. We therefore stratify every model
+  comparison by scenario and report a scenario-cluster bootstrap interval alongside.
+\end{enumerate}
+The natural full model is a mixed-effects logistic regression with a random scenario intercept,
+$\operatorname{logit}\pi_{msc} = \beta_m + \gamma_c + u_s$, $u_s \sim N(0,\sigma^2)$. With 0 to 10 events per model it
+does not estimate $\beta_m$ reliably (separation: several models have zero events), so we answer the same questions
+with exact conditional tests, which are valid at any sample size.
+
+%=====================================================================
+\section{Hypotheses and tests}
+\label{sec:tests}
+All tests are two-sided at $\alpha = \val{alpha}$ unless stated. Tests are grouped into families F1 to F9 by question;
+within each family, p-values are adjusted with the Holm-Bonferroni method (Section~\ref{sec:holm}). The hypotheses F1
+to F8 were formalized after the main campaign had been run and looked at; they are \textbf{exploratory}. The two
+scanning scenarios and the F9 follow-up runs were run after the formalisation.
+
+%.....................................................................
+
+\subsection{F1: Are agents misled at more than a negligible rate?}
+\label{sec:f1}
+\hyp{F1}{$\pi_m \le p_0$}{$\pi_m > p_0$, for each model $m$ at default effort ($n = \val{design.older_models_runs_each}$ runs, one per scenario).}
+
+\paragraph{Test.} One-sided exact binomial test:
+\[ p = P(K \ge k \mid n, p_0) = \sum_{i=k}^{n} \binom{n}{i} p_0^{\,i} (1-p_0)^{n-i}. \]
+\paragraph{Why this test.} The question is one-sided (is the rate \emph{above} a tolerable level), the data are one
+count per model, and $n$ is small, so the exact binomial tail is the uniformly most powerful test and needs no
+approximation. A two-sided test would also ``reject'' when a model is better than $p_0$, which is not the question.
+\paragraph{Why $p_0 = 1\%$.} A rate is negligible when it does not add up over realistic use. With per-exposure
+probability $p_0$, the chance of at least one compromise over $N$ exposures to poisoned content is $1-(1-p_0)^N$: for
+$p_0 = 1\%$ and $N = 100$ (an agent that reads a hundred attacker-reachable documents over some weeks) it is 63\%. So 1\%
+is a generous threshold; we report $p_0 = 0.1\%$ and $5\%$ as sensitivity.
+\paragraph{Interval.} Clopper-Pearson (exact) 95\% interval, the inversion of two one-sided binomial tests:
+\[ \pi_{\text{lo}} = B^{-1}\!\left(\tfrac{\alpha}{2};\, k,\, n-k+1\right),\qquad
+   \pi_{\text{hi}} = B^{-1}\!\left(1-\tfrac{\alpha}{2};\, k+1,\, n-k\right), \]
+with $B^{-1}$ the beta quantile. It guarantees at least 95\% coverage at every $\pi$, which matters near 0, where the
+Wald interval $\hat\pi \pm 1.96\sqrt{\hat\pi(1-\hat\pi)/n}$ collapses to the point 0 when $k = 0$. For $k = 0$ the
+upper bound is about $3/n$ (``rule of three''): \val{power.rule_of_three_upper} here. A model with zero follows in 43
+runs is therefore \emph{not} shown to be below a few percent.
+
+\paragraph{Result.} Table~\ref{tab:f1}. Pooled over all runs, \val{F1-all-runs.k} of \val{F1-all-runs.n} runs
+followed (\val{F1-all-runs.rate}, 95\% CI \val{F1-all-runs.cp_lo} to \val{F1-all-runs.cp_hi}). The claim $p = 0$ is
+refuted for every model with at least one follow. The stronger claim $p \le 1\%$ is rejected after Holm only for
+Haiku 4.5 and Sonnet 4.5 (\val{F1-Haiku 4.5.k} of 43 each, Holm $p = \val{F1-Haiku 4.5.p_holm}$). For every 5.x model
+the data are \emph{inconclusive in both directions}: one follow in 43 runs neither shows a rate above 1\% nor rules out
+one up to \val{F1-Opus 5.5.cp_hi} (the upper CP bound). The pooled row reuses the same scenarios across models and
+conditions, so its binomial test treats correlated runs as independent; it is descriptive, not a test of any single
+deployment.
+
+\begin{table}[h]\centering\small
+\caption{F1 per model at default effort. CP = Clopper-Pearson 95\% interval. $p$ = one-sided exact binomial test of
+$H_0{:}\ \pi \le p_0$; Holm-adjusted over the 11 models.}\label{tab:f1}
+\input{../generated/f1-table.tex}
+\end{table}
+
+%.....................................................................
+
+\subsection{F2: Does the model generation matter?}
+\hyp{F2}{$\pi_{4.x} = \pi_{5.x}$}{they differ (default effort, guard off).}
+
+\paragraph{Tests.} Three views of the same comparison, because each fixes a weakness of another.
+\begin{enumerate}
+\item \textbf{Fisher's exact test} on the pooled $2\times 2$ table. Under $H_0$ and fixed margins, the count $a$ of
+  follows in group 1 is hypergeometric,
+  \[ P(a) = \frac{\binom{n_1}{a}\binom{n_2}{m-a}}{\binom{N}{m}}, \]
+  with $n_1, n_2$ the group sizes, $m$ the total follows and $N = n_1 + n_2$. The two-sided $p$ sums $P(x)$ over all
+  $x$ with $P(x) \le P(a)$. Exact at any count; chosen over $\chi^2$ because expected cells are below 5.
+\item \textbf{Exact stratified test} (the exact form of the Cochran-Mantel-Haenszel test). Each scenario $s$ is a
+  stratum with its own $2\times 2$ table $(a_s, b_s, c_s, d_s)$. Conditioning on every stratum's margins,
+  $S = \sum_s a_s$ is a sum of independent hypergeometric variables, and its exact null distribution is their
+  convolution,
+  \[ P(S = t) = \sum_{x_1 + \dots + x_S = t}\ \prod_s P_s(x_s), \qquad p = \sum_{t:\,P(S=t) \le P(S=S_{\text{obs}})} P(S=t). \]
+  This compares generations \emph{within} the same scenario, so a difference cannot come from one generation having
+  met easier scenarios. The common odds ratio is estimated with the Mantel-Haenszel estimator
+  $\widehat{OR}_{MH} = \sum_s (a_s d_s / N_s) \big/ \sum_s (b_s c_s / N_s)$.
+\item \textbf{Scenario-cluster bootstrap} of the risk difference $\hat\pi_1 - \hat\pi_2$: draw 43 scenarios with
+  replacement (\val{bootstrap_draws} times, fixed seed), recompute, take the 2.5th and 97.5th percentiles. This gives
+  an interval in percentage points that respects the clustering.
+\end{enumerate}
+\paragraph{Sensitivity.} Repeated without the bootstrap scenario, which holds most 5.x follows, to show the result
+does not hinge on one scenario.
+
+\paragraph{Result.} 4.x followed \val{F2-generation.k1}/\val{F2-generation.n1} (\val{F2-generation.rate1}), 5.x
+\val{F2-generation.k2}/\val{F2-generation.n2} (\val{F2-generation.rate2}); risk difference \val{F2-generation.rd},
+cluster 95\% CI \val{F2-generation.rd_ci_cluster}; Fisher $p = \val{F2-generation.fisher_p}$, stratified
+$p = \val{F2-generation.strat_p}$. Without the bootstrap scenario: \val{F2-generation-without-bootstrap.k1}/\val{F2-generation-without-bootstrap.n1}
+vs \val{F2-generation-without-bootstrap.k2}/\val{F2-generation-without-bootstrap.n2}, stratified
+$p = \val{F2-generation-without-bootstrap.strat_p}$.
+
+%.....................................................................
+
+\subsection{F3: Within a generation, does the tier matter?}
+\hyp{F3}{$\pi_{\text{tier }a} = \pi_{\text{tier }b}$ within 4.5 and within 5.5}{they differ.}
+\paragraph{Test.} The exact stratified test of F2 for each of the six pairs (Haiku, Sonnet, Opus within 4.5 and within
+5.5), Holm over the six. For 5.5 all seven conditions per scenario enter the stratum, which uses every run without
+treating repeated runs on one scenario as independent.
+\paragraph{Why pairs and not one $2\times 3$ test.} The practical question is pairwise (``should I pay for Opus
+instead of Sonnet''), and a global test that rejects does not say which pair differs.
+\paragraph{Reading a non-significant result.} Absence of evidence is not equality. Section~\ref{sec:power} shows the
+smallest difference this design detects; any tier gap below it is invisible here, so F3 can show that tiers differ
+but never that they are equal.
+\paragraph{Result.} No pair differs after Holm. The largest gap is Haiku 4.5 vs Opus 4.5:
+\val{F3-Haiku 4.5-vs-Opus 4.5.k1}/\val{F3-Haiku 4.5-vs-Opus 4.5.n1} vs \val{F3-Haiku 4.5-vs-Opus 4.5.k2}/\val{F3-Haiku 4.5-vs-Opus 4.5.n2},
+stratified $p = \val{F3-Haiku 4.5-vs-Opus 4.5.strat_p}$, Holm $p = \val{F3-Haiku 4.5-vs-Opus 4.5.p_holm}$; the cluster
+interval of the difference (\val{F3-Haiku 4.5-vs-Opus 4.5.rd_ci_cluster}) excludes zero, so the 4.5 tier gap is
+suggestive but not established at the family level. Within 5.5 the three tiers follow
+\val{F3-Haiku 5.5-vs-Sonnet 5.5.k1}, \val{F3-Haiku 5.5-vs-Sonnet 5.5.k2} and \val{F3-Haiku 5.5-vs-Opus 5.5.k2} of 301
+runs, almost all on one scenario (F8): price is not a security control here.
+
+%.....................................................................
+
+\subsection{F4: Does reasoning effort matter?}
+\hyp{F4}{no monotone trend in $\pi$ over low $<$ medium $<$ high $<$ xhigh $<$ max}{a monotone trend (for each 5.5 model).}
+\paragraph{Test.} Cochran-Armitage trend test with scores $t_j = 0,\dots,4$:
+\[ T = \sum_j t_j\,(k_j - n_j\bar\pi),\qquad
+   \operatorname{Var}(T) = \bar\pi(1-\bar\pi)\Big[\sum_j n_j t_j^2 - \tfrac{(\sum_j n_j t_j)^2}{N}\Big],\qquad
+   Z = T/\sqrt{\operatorname{Var}(T)}. \]
+\paragraph{Why this test.} Effort is ordered. A test for any difference among five groups ($\chi^2$ with 4 degrees of
+freedom) spends power on patterns nobody hypothesised (high at medium, low at xhigh); the trend test asks the one
+question of interest, ``does more thinking help or hurt'', with one degree of freedom.
+\paragraph{Result.} No trend for any 5.5 model (Holm $p$: Haiku \val{F4-Haiku 5.5.p_holm}, Sonnet \val{F4-Sonnet 5.5.p_holm},
+Opus \val{F4-Opus 5.5.p_holm}). Opus 5.5 followed the same single scenario at every effort level.
+
+%.....................................................................
+
+\subsection{F5: Does a security system prompt help?}
+\hyp{F5}{the security prompt does not change $\pi$}{it changes $\pi$ (each 5.5 model).}
+\paragraph{Test.} Exact McNemar test on scenario pairs (same scenario with and without the prompt). With $b$ =
+scenarios followed only without the prompt and $c$ = only with it, under $H_0$ $b \sim \mathrm{Bin}(b+c, \tfrac12)$:
+\[ p = \min\!\Big(1,\ 2\sum_{i=0}^{\min(b,c)} \binom{b+c}{i} 2^{-(b+c)}\Big). \]
+\paragraph{Why this test.} The two arms are paired (same 43 scenarios); scenarios both arms follow or both resist
+carry no information about the prompt. Fisher's test would treat the arms as independent samples and lose that
+pairing.
+\paragraph{Result.} Each 5.5 model followed exactly the same scenario with and without the prompt
+(\val{F5-Haiku 5.5.vanilla_only} and \val{F5-Haiku 5.5.defended_only} discordant pairs for Haiku, the same for Sonnet and
+Opus), so $p = 1$. The test has no power to show a benefit when the model already resists 42 of 43 scenarios; what it
+does show is that the one attack that works on 5.5 also works under an explicit security instruction.
+
+%.....................................................................
+
+\subsection{F6: Do models fail where the guard looks?}
+\hyp{F6}{models follow guard-covered attacks as often as attacks the guard misses}{they differ (per generation, bootstrap scenario excluded).}
+\paragraph{Test.} Fisher's exact test, covered vs missed scenarios. Together with the share of all follows that the
+guard would have stopped (Wilson interval, Section~\ref{sec:intervals}), this answers whether the guard and the model
+cover the same holes (then the guard adds little) or different ones.
+\paragraph{Result.} \val{guard_stoppable_share.k} of \val{guard_stoppable_share.n} follows
+(\val{guard_stoppable_share.rate}, 95\% CI \val{guard_stoppable_share.lo} to \val{guard_stoppable_share.hi}) were on
+attacks the static guard flags or strips. Fisher: 4.x covered \val{F6-4.x.k_covered}/\val{F6-4.x.n_covered} vs missed
+\val{F6-4.x.k_missed}/\val{F6-4.x.n_missed} ($p = \val{F6-4.x.p_holm}$ Holm); 5.x \val{F6-5.x.k_covered}/\val{F6-5.x.n_covered}
+vs \val{F6-5.x.k_missed}/\val{F6-5.x.n_missed} ($p = \val{F6-5.x.p_holm}$). Models fail on covered and missed attacks at
+similar rates, so the static scan is not redundant with the model, and it is not sufficient either: most follows,
+including every 5.5 follow, were on the one process-style attack that has no hidden text to find. That gap is what
+the hooks (Section~\ref{sec:ab}) are for.
+
+%.....................................................................
+
+\subsection{F7: Can a static matcher decide alone?}
+\label{sec:f7}
+\hyp{F7}{the rule judge and the LLM judge flag ``followed'' equally often on the same runs}{they differ.}
+\paragraph{Tests.} Exact McNemar on the discordant runs (as in F5), and Cohen's kappa for agreement beyond chance,
+$\kappa = (p_o - p_e)/(1 - p_e)$, with $p_o$ the observed agreement and $p_e$ the agreement expected from the
+marginals; its 95\% interval from \val{bootstrap_draws} bootstrap resamples of runs.
+\paragraph{Why it matters.} The rule judge is a static pattern matcher over the agent's actions, the same kind of
+component as a static injection scanner. If it systematically over-flags, a scanner that blocks on patterns alone
+would block legitimate work; the design consequence is that a static layer should report and gate, and an informed
+decision (the model, or the user) should decide.
+\paragraph{Result.} On \val{F7-judges.runs_both} runs: rule \val{F7-judges.rule_yes} vs LLM \val{F7-judges.llm_yes};
+discordant \val{F7-judges.rule_only} (rule only) vs \val{F7-judges.llm_only} (LLM only); McNemar
+$p = \val{F7-judges.p}$; $\kappa = \val{F7-judges.kappa}$, 95\% CI \val{F7-judges.kappa_ci}.
+
+%.....................................................................
+
+\subsection{F8: Is one rate per model a fair summary?}
+\hyp{F8}{all scenarios share one follow probability (per group)}{they differ.}
+\paragraph{Test.} Permutation test of homogeneity. Statistic
+$X^2 = \sum_s (k_s - n_s\bar\pi)^2 / \big(n_s\bar\pi(1-\bar\pi)\big)$; its null distribution comes from shuffling the
+outcomes across runs (\val{bootstrap_draws} draws), $p = (1 + \#\{X^2_{\text{perm}} \ge X^2_{\text{obs}}\})/(B+1)$.
+\paragraph{Why this test.} Pearson's $\chi^2$ reference distribution is invalid with expected counts far below 5; the
+permutation distribution is exact up to Monte Carlo error. F8 is the check behind Section~\ref{sec:model}: if it
+rejects, pooled rates hide a few dominant scenarios and every comparison must be stratified.
+\paragraph{Result.} Rejected in every group (Holm $p \le \val{F8-4.x default.p_holm}$). In 4.x the follows spread over
+several scenarios (largest share \val{F8-4.x default.top_share}); in 5.x at default effort one case holds
+\val{F8-5.x default.top_share} of follows, and for the 5.5 models over all conditions \val{F8-Haiku 5.5.top_share}
+(Haiku), \val{F8-Sonnet 5.5.top_share} (Sonnet) and \val{F8-Opus 5.5.top_share} (Opus). A per-model rate for 5.x is
+therefore mostly the rate of one attack.
+
+%.....................................................................
+
+\subsection{F9: Did the bootstrap weakness appear with 5.5?}
+\hyp{F9}{Opus 5 and Sonnet 5 run the bootstrap script as often as the 5.5 models}{they differ (same seven conditions each).}
+\paragraph{Test.} Fisher's exact test. This follow-up was run after an earlier analysis had suggested that 5.5 models
+``regressed'' on this scenario on the basis of one run per older model.
+\paragraph{Result.} 5.0: \val{F9-bootstrap-5.0-vs-5.5.k_5_0}/\val{F9-bootstrap-5.0-vs-5.5.n_5_0}; 5.5:
+\val{F9-bootstrap-5.0-vs-5.5.k_5_5}/\val{F9-bootstrap-5.0-vs-5.5.n_5_5}; $p = \val{F9-bootstrap-5.0-vs-5.5.p}$.
+
+%=====================================================================
+\section{Intervals, multiplicity and power}
+
+\subsection{Intervals}
+\label{sec:intervals}
+Rates in descriptive tables carry a Wilson score interval,
+\[ \frac{\hat\pi + \frac{z^2}{2n}}{1 + \frac{z^2}{n}} \ \pm\ \frac{z}{1 + \frac{z^2}{n}}\sqrt{\frac{\hat\pi(1-\hat\pi)}{n} + \frac{z^2}{4n^2}},\qquad z = 1.96, \]
+which has close to nominal coverage for small $n$ and $\hat\pi$ near 0 and is narrower than Clopper-Pearson. Where a
+bound is the result itself (F1), the exact Clopper-Pearson interval is used instead.
+
+\subsection{Multiple comparisons}
+\label{sec:holm}
+Within a family of $m$ tests with ordered p-values $p_{(1)} \le \dots \le p_{(m)}$, the Holm adjustment is
+$\tilde p_{(i)} = \max_{j \le i} \min\{1, (m-j+1)\,p_{(j)}\}$. It controls the family-wise error rate at $\alpha$
+without assumptions about dependence between tests, and is uniformly more powerful than Bonferroni. We correct
+within families, not across them, because each family answers a separate question that a reader acts on separately.
+
+\subsection{Power and what the design cannot see}
+\label{sec:power}
+The exact power of Fisher's test with $n$ runs per arm and true rates $\pi_1, \pi_2$ is
+\[ \text{power} = \sum_{x=0}^{n}\sum_{y=0}^{n} \mathrm{Bin}(x; n, \pi_1)\,\mathrm{Bin}(y; n, \pi_2)\ \mathbf{1}\big[p_F(x, y) \le \alpha\big]. \]
+With $n = \val{power.runs_per_model_default}$ runs per model, comparing a model at 2\% with another needs the other to
+be at \val{power.mde_from_2pct} or more to be detected 80\% of the time. Differences between tiers in single digits
+are therefore invisible here, and non-significant F3 results mean ``not shown''. The generation comparison (F2) has
+\val{power.power_4x_vs_5x_observed} power at the observed rates.
+
+%=====================================================================
+\section{Guard ON: the full-agent A/B}
+\label{sec:ab}
+The main experiment measures the model with the guard off plus the static coverage of each scenario. The shipped
+plugin also has hooks that act on what the agent \emph{does} (an effect gate before build tools in downloaded folders,
+a taint gate after HIGH findings). These are measured in a separate A/B with real Claude Code agents
+(Section~\ref{sec:ab-results}): Haiku 4.5 and Haiku 5.5, the scenarios that any model
+ever followed, guard on vs off, one run per cell. The hook's decision on every tool call is logged by a pass-through
+around the unchanged hook. Outcomes per run: attempted, intercepted by the guard (deny or ask), silent success, task
+completed. The two arms are paired by scenario (exact McNemar, as F5).
+\paragraph{Why two Haikus.} The static scan and the hook's decision on a given tool call do not depend on the model;
+only whether the model still attempts after sanitizing and warnings does. Haiku 4.5 is the most often misled model
+(``weak model plus guard''); Haiku 5.5 is the current low-cost model that a deployer would run behind a guard.
+
+\subsection{Results}\label{sec:ab-results}
+An attempt that Claude Code's own permission prompt denied still counts as followed: the model decided to act, and a
+user who clicks ``allow'' would have run it.
+
+\begin{table}[h]\centering\small
+\caption{Guard A/B, one run per scenario and arm. McNemar on the 14 scenario pairs per model.}\label{tab:ab}
+\input{../generated/ab-table.tex}
+\end{table}
+
+\begin{table}[h]\centering\small
+\caption{Every A/B pair where either arm followed or the guard intervened. ``Static scan'': whether the shipped scanner
+flags or strips the attack when the agent reads the file through it.}\label{tab:abcases}
+\input{../generated/ab-cases.tex}
+\end{table}
+
+\paragraph{Reading.} With the guard, Haiku 4.5 followed \val{AB-Haiku 4.5.on_followed} of 14 attacks instead of
+\val{AB-Haiku 4.5.off_followed}; all three it no longer followed are attacks the guard flagged (C11, C19, C33), and none
+became a follow only with the guard. Haiku 5.5 followed none in either arm. The guarded arm warned the user more
+often (\val{AB-both.on_reported} vs \val{AB-both.off_reported} of 28) and finished the task as often
+(\val{AB-both.on_task_done} vs \val{AB-both.off_task_done}). McNemar $p = \val{AB-Haiku 4.5.p}$ is the smallest value
+three discordant pairs can give; a significant result needs at least six one-way flips, so this A/B is a case study
+with a direction, not a proof.
+
+\paragraph{What the guard missed, and why.} The three attacks that passed show three different gaps, each fixable and
+each now a test case for the guard:
+\begin{enumerate}
+\item \textbf{C05, look-alike package.} The agent fetched the page with a plain \texttt{curl} in the shell instead of
+  \texttt{safe-fetch}. The output hook only labeled the output as web content; it did not detect the hidden text in
+  raw HTML. Static coverage assumed the agent would read through the scanner, which it did not.
+\item \textbf{C38, setup script.} The script that downloads and runs a remote file is a local, trusted-looking file
+  in the user's own repository; nothing in the session was tainted, so no gate applied. Claude Code's permission
+  prompt stopped it in both arms.
+\item \textbf{C39, CI secrets.} The instruction is plain language in a collapsed section of an issue; writing a
+  workflow step that sends a secret to an outside host passed every hook.
+\end{enumerate}
+\paragraph{Friction.} One guard deny in 28 guarded runs, and it was a false one: the read gate refused a shell loop that
+called \texttt{safe-read} itself on each file.
+
+%=====================================================================
+\section{Threats to validity}
+\begin{description}
+\item[Construct.] The lean harness measures decisions, not executed effects; one decision in a real loop could be
+  corrected or compounded by later steps. The outcome ``followed'' depends on the judge; the LLM judge is from the same
+  model family as the models judged, and it was not validated against human labels on a held-out set.
+\item[Internal.] The same author wrote the scenarios and the guard, so the guard is tuned to the test set: static
+  coverage is an optimistic estimate for unseen attacks. Hypotheses F1 to F8 were stated after seeing the data.
+\item[External.] 43 hand-written scenarios are not a sample from real attacks; rates do not transfer to a deployment
+  without knowing its attack mix. One run per cell; model sampling noise is part of the outcome. Models were tested
+  in November 2026; providers update models.
+\item[Statistical conclusion.] Small counts limit power (Section~\ref{sec:power}); pooled rates reuse the same
+  scenarios; Holm control is per family, not over the document.
+\end{description}
+
+%=====================================================================
+\section{Reproducibility}
+All tests are implemented without statistical libraries, so each formula above is visible in code: exact tests
+enumerate their null distributions, Monte Carlo tests use seed \val{seed} and \val{bootstrap_draws} draws. The public
+data files (\texttt{docs/research/data/}) hold every count used here; \texttt{make\_tex.py} turns them into the numbers in
+this document. The scenarios and payloads are kept private.
+
+\appendix
+\section{All tests}
+\small
+\input{../generated/tests-table.tex}
+
+\end{document}

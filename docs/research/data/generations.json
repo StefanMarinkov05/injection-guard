@@ -1,0 +1,30 @@
+{
+ "rows": [
+  {
+   "generation": "4.x",
+   "models": 6,
+   "k": 29,
+   "n": 258,
+   "rate": 0.1124,
+   "lo": 0.0794,
+   "hi": 0.1568,
+   "pct": 11.2,
+   "lo_pct": 7.9,
+   "hi_pct": 15.7,
+   "fisher_p": 1e-05
+  },
+  {
+   "generation": "5.x",
+   "models": 5,
+   "k": 3,
+   "n": 215,
+   "rate": 0.014,
+   "lo": 0.0048,
+   "hi": 0.0402,
+   "pct": 1.4,
+   "lo_pct": 0.5,
+   "hi_pct": 4.0,
+   "fisher_p": 1e-05
+  }
+ ]
+}

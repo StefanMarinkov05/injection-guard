@@ -1,0 +1,21 @@
+{
+ "rows": [
+  {
+   "runs": 1247,
+   "scenarios": 43,
+   "models": 11,
+   "k": 54,
+   "n": 1247,
+   "rate": 0.0433,
+   "lo": 0.0333,
+   "hi": 0.0561,
+   "pct": 4.3,
+   "lo_pct": 3.3,
+   "hi_pct": 5.6,
+   "guard_covers": 30,
+   "stage2_reached": 38,
+   "stage2_followed": 4,
+   "spend_usd": 28.72
+  }
+ ]
+}

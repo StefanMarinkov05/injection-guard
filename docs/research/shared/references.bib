@@ -1,0 +1,282 @@
+% Bibliography for "Reading Is Not Obeying" (docs/paper/paper.tex).
+% Every entry was located on 2026-11-19; incident entries cite the primary disclosure where one was found,
+% otherwise a named news report. Vendor-reported numbers are marked as such in the text.
+
+% ---------------------------------------------------------------- attacks and benchmarks
+@inproceedings{greshake2023,
+  author    = {Greshake, Kai and Abdelnabi, Sahar and Mishra, Shailesh and Endres, Christoph and Holz, Thorsten and Fritz, Mario},
+  title     = {Not What You've Signed Up For: Compromising Real-World {LLM}-Integrated Applications with Indirect Prompt Injection},
+  booktitle = {Proceedings of the 16th ACM Workshop on Artificial Intelligence and Security (AISec)},
+  pages     = {79-90},
+  year      = {2023},
+  note      = {arXiv:2302.12173},
+  url       = {https://arxiv.org/abs/2302.12173}
+}
+@inproceedings{perez2022,
+  author    = {Perez, F{\'a}bio and Ribeiro, Ian},
+  title     = {Ignore Previous Prompt: Attack Techniques for Language Models},
+  booktitle = {NeurIPS ML Safety Workshop},
+  year      = {2022},
+  note      = {arXiv:2211.09527},
+  url       = {https://arxiv.org/abs/2211.09527}
+}
+@inproceedings{liu2024formalizing,
+  author    = {Liu, Yupei and Jia, Yuqi and Geng, Runpeng and Jia, Jinyuan and Gong, Neil Zhenqiang},
+  title     = {Formalizing and Benchmarking Prompt Injection Attacks and Defenses},
+  booktitle = {33rd USENIX Security Symposium},
+  pages     = {1831-1847},
+  year      = {2024},
+  url       = {https://www.usenix.org/conference/usenixsecurity24/presentation/liu-yupei}
+}
+@inproceedings{zhan2024injecagent,
+  author    = {Zhan, Qiusi and Liang, Zhixiang and Ying, Zifan and Kang, Daniel},
+  title     = {{InjecAgent}: Benchmarking Indirect Prompt Injections in Tool-Integrated Large Language Model Agents},
+  booktitle = {Findings of the Association for Computational Linguistics: ACL 2024},
+  year      = {2024},
+  note      = {arXiv:2403.02691},
+  url       = {https://arxiv.org/abs/2403.02691}
+}
+@inproceedings{debenedetti2024agentdojo,
+  author    = {Debenedetti, Edoardo and Zhang, Jie and Balunovi{\'c}, Mislav and Beurer-Kellner, Luca and Fischer, Marc and Tram{\`e}r, Florian},
+  title     = {{AgentDojo}: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for {LLM} Agents},
+  booktitle = {Advances in Neural Information Processing Systems 37, Datasets and Benchmarks Track},
+  year      = {2024},
+  note      = {arXiv:2406.13352},
+  url       = {https://arxiv.org/abs/2406.13352}
+}
+@misc{nasr2025attacker,
+  author    = {Nasr, Milad and Carlini, Nicholas and others},
+  title     = {The Attacker Moves Second: Stronger Adaptive Attacks Bypass Defenses Against {LLM} Jailbreaks and Prompt Injections},
+  year      = {2025},
+  note      = {arXiv:2510.09023; to appear at USENIX Security 2026},
+  url       = {https://arxiv.org/abs/2510.09023}
+}
+@misc{zhu2026beyond,
+  author    = {Zhu, Fukang and Zhao, Binbin and Lin, Ruixiao and He, Ping and Du, Tianyu and Ji, Shouling},
+  title     = {Beyond the Payload: How User Invocation Shapes Coding Agent Vulnerability to Repository Poisoning},
+  year      = {2026},
+  note      = {arXiv:2608.30686},
+  url       = {https://arxiv.org/abs/2608.30686}
+}
+@inproceedings{spracklen2025package,
+  author    = {Spracklen, Joseph and Wijewickrama, Raveen and Sakib, A H M Nazmus and Maiti, Anindya and Viswanath, Bimal and Jadliwala, Murtuza},
+  title     = {We Have a Package for You! A Comprehensive Analysis of Package Hallucinations by Code Generating {LLMs}},
+  booktitle = {34th USENIX Security Symposium},
+  pages     = {3687-3706},
+  year      = {2025},
+  url       = {https://www.usenix.org/conference/usenixsecurity25/presentation/spracklen}
+}
+@misc{lin2025hidden,
+  author    = {Lin, Zhicheng},
+  title     = {Hidden Prompts in Manuscripts Exploit {AI}-Assisted Peer Review},
+  year      = {2025},
+  note      = {arXiv:2507.06185},
+  url       = {https://arxiv.org/abs/2507.06185}
+}
+
+% ---------------------------------------------------------------- defenses
+@misc{hines2024spotlighting,
+  author    = {Hines, Keegan and Lopez, Gary and Hall, Matthew and Zarfati, Federico and Zunger, Yonatan and K{\i}c{\i}man, Emre},
+  title     = {Defending Against Indirect Prompt Injection Attacks With Spotlighting},
+  year      = {2024},
+  note      = {CAMLIS 2024; arXiv:2403.14720},
+  url       = {https://arxiv.org/abs/2403.14720}
+}
+@misc{wallace2024hierarchy,
+  author    = {Wallace, Eric and Xiao, Kai and Leike, Reimar and Weng, Lilian and Heidecke, Johannes and Beutel, Alex},
+  title     = {The Instruction Hierarchy: Training {LLMs} to Prioritize Privileged Instructions},
+  year      = {2024},
+  note      = {arXiv:2404.13208},
+  url       = {https://arxiv.org/abs/2404.13208}
+}
+@misc{debenedetti2025camel,
+  author    = {Debenedetti, Edoardo and Shumailov, Ilia and Fan, Tianqi and Hayes, Jamie and Carlini, Nicholas and Fabian, Daniel and Kern, Christoph and Shi, Chongyang and Terzis, Andreas and Tram{\`e}r, Florian},
+  title     = {Defeating Prompt Injections by Design},
+  year      = {2025},
+  note      = {arXiv:2503.18813},
+  url       = {https://arxiv.org/abs/2503.18813}
+}
+@misc{beurerkellner2025patterns,
+  author    = {Beurer-Kellner, Luca and others},
+  title     = {Design Patterns for Securing {LLM} Agents against Prompt Injections},
+  year      = {2025},
+  note      = {arXiv:2506.08837},
+  url       = {https://arxiv.org/abs/2506.08837}
+}
+@misc{wan2024cyberseceval3,
+  author    = {Wan, Shengye and others},
+  title     = {{CyberSecEval} 3: Advancing the Evaluation of Cybersecurity Risks and Capabilities in Large Language Models},
+  year      = {2024},
+  note      = {arXiv:2408.01605; reports Prompt Guard results (vendor-reported)},
+  url       = {https://arxiv.org/abs/2408.01605}
+}
+@misc{jacob2025promptshield,
+  author    = {Jacob, Dennis and Alzahrani, Hend and Hu, Zhanhao and Alomair, Basel and Wagner, David},
+  title     = {{PromptShield}: Deployable Detection for Prompt Injection Attacks},
+  year      = {2025},
+  note      = {arXiv:2501.15145},
+  url       = {https://arxiv.org/abs/2501.15145}
+}
+@misc{li2024injecguard,
+  author    = {Li, Hao and Liu, Xiaogeng and Xiao, Chaowei},
+  title     = {{InjecGuard}: Benchmarking and Mitigating Over-defense in Prompt Injection Guardrail Models},
+  year      = {2024},
+  note      = {arXiv:2410.22770 (NotInject benign set)},
+  url       = {https://arxiv.org/abs/2410.22770}
+}
+@misc{anthropic2025chrome,
+  author    = {{Anthropic}},
+  title     = {Piloting {Claude} in {Chrome}},
+  year      = {2025},
+  month     = aug,
+  note      = {123 test cases, 29 attack scenarios; vendor-reported},
+  url       = {https://claude.com/resources/articles/claude-for-chrome},
+}
+@misc{anthropic2025defenses,
+  author    = {{Anthropic}},
+  title     = {Mitigating Prompt Injections in Browser Use},
+  year      = {2025},
+  month     = nov,
+  note      = {vendor-reported},
+  url       = {https://www.anthropic.com/research/prompt-injection-defenses}
+}
+
+% ---------------------------------------------------------------- frameworks
+@misc{owasp2025llm01,
+  author    = {{OWASP GenAI Security Project}},
+  title     = {{LLM01:2025} Prompt Injection},
+  year      = {2025},
+  howpublished = {OWASP Top 10 for LLM Applications 2025},
+  url       = {https://genai.owasp.org/llmrisk/llm01-prompt-injection/}
+}
+@techreport{nist2025aml,
+  author    = {Vassilev, Apostol and Oprea, Alina and Fordyce, Alie and Anderson, Hyrum and Davies, Xander and Hamin, Maia},
+  title     = {Adversarial Machine Learning: A Taxonomy and Terminology of Attacks and Mitigations},
+  institution = {National Institute of Standards and Technology},
+  number    = {NIST AI 100-2e2025},
+  year      = {2025},
+  doi       = {10.6028/NIST.AI.100-2e2025},
+  url       = {https://csrc.nist.gov/pubs/ai/100/2/e2025/final}
+}
+
+% ---------------------------------------------------------------- incidents (disclosures and reports)
+@misc{echoleak2025,
+  author    = {{Aim Labs}},
+  title     = {{EchoLeak}: Zero-Click Data Exfiltration from {Microsoft 365 Copilot} ({CVE-2025-32711})},
+  year      = {2025},
+  month     = jun,
+  note      = {CVSS 9.3, fixed server-side May 2025; technical write-up arXiv:2509.10540},
+  url       = {https://nvd.nist.gov/vuln/detail/CVE-2025-32711}
+}
+@misc{aws2025q,
+  author    = {{Amazon Web Services}},
+  title     = {Security Update for {Amazon Q Developer} Extension for {Visual Studio Code} (Version 1.84), {AWS-2025-015}},
+  year      = {2025},
+  month     = jul,
+  url       = {https://aws.amazon.com/security/security-bulletins/AWS-2025-015/}
+}
+@misc{wiz2025nx,
+  author    = {{Wiz Research}},
+  title = {s1ngularity: Supply Chain Attack Leaks Secrets on {GitHub}: Everything You Need to Know},
+  year      = {2025},
+  month     = aug,
+  note      = {malicious Nx npm versions used installed AI CLIs to search for secrets},
+  url       = {https://www.wiz.io/blog/s1ngularity-supply-chain-attack}
+}
+@misc{invariant2025githubmcp,
+  author    = {{Invariant Labs}},
+  title     = {{GitHub MCP} Exploited: Accessing Private Repositories via {MCP}},
+  year      = {2025},
+  month     = may,
+  url       = {https://invariantlabs.ai/blog/mcp-github-vulnerability}
+}
+@misc{brave2025comet,
+  author    = {{Brave Security Team}},
+  title     = {Agentic Browser Security: Indirect Prompt Injection in {Perplexity Comet}},
+  year      = {2025},
+  month     = aug,
+  url       = {https://brave.com/blog/comet-prompt-injection/}
+}
+@misc{cursor2025curxecute,
+  author    = {{Aim Labs}},
+  title     = {{CurXecute}: Remote Code Execution in {Cursor} via Prompt Injection ({CVE-2025-54135})},
+  year      = {2025},
+  month     = aug,
+  note      = {CVSS 8.6; fixed in Cursor 1.3},
+  url       = {https://nvd.nist.gov/vuln/detail/CVE-2025-54135}
+}
+@misc{rehberger2025copilot,
+  author    = {Rehberger, Johann},
+  title     = {{GitHub Copilot}: Remote Code Execution via Prompt Injection ({CVE-2025-53773})},
+  year      = {2025},
+  month     = aug,
+  howpublished = {Embrace The Red},
+  url       = {https://embracethered.com/blog/posts/2025/github-copilot-remote-code-execution-via-prompt-injection/}
+}
+@misc{tracebit2025gemini,
+  author    = {{Tracebit}},
+  title     = {Code Execution Through Deception: {Gemini AI CLI} Hijack},
+  year      = {2025},
+  month     = jul,
+  note      = {fixed in Gemini CLI 0.1.14 (2025-07-25)},
+  url       = {https://tracebit.com/blog/code-exec-deception-gemini-ai-cli-hijack}
+}
+@misc{securityweek2026comment,
+  author    = {{SecurityWeek}},
+  title     = {{Claude Code}, {Gemini CLI}, {GitHub Copilot} Agents Vulnerable to Prompt Injection via Comments},
+  year      = {2026},
+  note      = {"Comment and Control"; CVE-2026-54316, CVE-2026-12537},
+  url       = {https://www.securityweek.com/claude-code-gemini-cli-github-copilot-agents-vulnerable-to-prompt-injection-via-comments/}
+}
+@misc{helpnet2026mozilla,
+  author    = {{Help Net Security}},
+  title     = {Mozilla Warns of Indirect Prompt Injection Risk in {AI} Coding Agents},
+  year      = {2026},
+  month     = jun,
+  note      = {Mozilla 0DIN proof of concept: a clean repository whose setup steps lead the agent to open a reverse shell},
+  url       = {https://www.helpnetsecurity.com/2026/06/29/mozilla-warns-of-indirect-prompt-injection-risk-in-ai-coding-agents/}
+}
+@misc{guardian2024search,
+  author    = {{The Guardian}},
+  title     = {{ChatGPT} Search Tool Vulnerable to Manipulation and Deception, Tests Show},
+  year      = {2024},
+  month     = dec,
+  note      = {24 December 2024},
+  url       = {https://www.theguardian.com/technology/2024/dec/24/chatgpt-search-tool-vulnerable-to-manipulation-and-deception-tests-show}
+}
+@misc{register2025reviewers,
+  author    = {{The Register}},
+  title     = {Scholars Sneaking Phrases into Papers to Fool {AI} Reviewers},
+  year      = {2025},
+  month     = jul,
+  note      = {reports the Nikkei Asia count of 17 papers},
+  url       = {https://www.theregister.com/software/2025/07/07/scholars-sneaking-phrases-into-papers-to-fool-ai-reviewers/708598},
+}
+@misc{scworld2025phish,
+  author    = {{SC Media}},
+  title     = {Malicious Email with Prompt Injection Targets {AI}-Based Scanners},
+  year      = {2025},
+  url       = {https://www.scworld.com/news/malicious-email-with-prompt-injection-targets-ai-based-scanners}
+}
+@misc{microsoft2026ascii,
+  author    = {{Microsoft Threat Intelligence}},
+  title     = {{ASCII} Smuggling Crosses Over from {AI} Prompt Injection to Phishing Evasion},
+  year      = {2026},
+  month     = sep,
+  url       = {https://www.microsoft.com/en-us/security/blog/2026/09/03/ascii-smuggling-crosses-over-from-ai-prompt-injection-to-phishing-evasion/}
+}
+@misc{sublime2025phish,
+  author    = {{Sublime Security}},
+  title     = {Adversarial Prompt Injection Payload for Evading {AI}-Based Detection Embedded in Phishing Campaign},
+  year      = {2025},
+  url       = {https://sublime.security/blog/adversarial-prompt-injection-payload-for-evading-ai-based-detection-embedded-in-phishing-campaign/}
+}
+
+% ---------------------------------------------------------------- this work
+@misc{injectionguard,
+  author    = {Marinkov, Stefan},
+  title     = {injection-guard: Prompt-Injection Defence for {Claude Code} Agents},
+  year      = {2026},
+  note      = {version 1.7.0},
+  url       = {https://github.com/StefanMarinkov05/injection-guard}
+}

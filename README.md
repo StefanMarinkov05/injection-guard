@@ -13,6 +13,8 @@ Prompt-injection defence for Claude Code agents: a Claude Code plugin marketplac
 | [CONTRIBUTING.md](CONTRIBUTING.md) | test-first workflow, where code goes |
 | [SECURITY.md](SECURITY.md) | how to report a prompt injection that got through |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | known limits |
+| [docs/research/build/paper.pdf](docs/research/build/paper.pdf) | the paper: where a guard is needed for Claude agents, measured on 11 models (results, no payloads) |
+| [docs/research/build/methods.pdf](docs/research/build/methods.pdf) | methods: every hypothesis, test, formula and threat to validity behind the paper |
 
 ## Install (local marketplace)
 ```sh
