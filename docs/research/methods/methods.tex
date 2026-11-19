@@ -2,10 +2,10 @@
 \usepackage{../shared/igresearch}
 \input{../generated/values.tex}
 
-\title{Measuring Prompt-Injection Resistance of Claude Agents:\\ Methods, Hypotheses and Tests}
+\title{Measuring Prompt-Injection Resistance of Claude Models:\\ Methods, Hypotheses and Tests}
 \author{\textbf{Stefan Marinkov}\thanks{\url{https://github.com/StefanMarinkov05/injection-guard}. Companion to the paper ``Reading Is Not Obeying''.}\\
   Independent researcher}
-\date{Data of 2026-11-19}
+\date{Data of 2026-11-19; revised 2026-11-20 after two LLM reviews}
 \igrunning{Measuring Prompt-Injection Resistance: Methods, Hypotheses and Tests}
 
 \begin{document}
@@ -16,7 +16,9 @@
 how a run is turned into an outcome, which hypotheses were stated, which test answers each one and why that test and
 not a more common one, the formulas, the power of the design, and the threats to validity. The paper reports the
 results briefly and points here for the argument. Attack payloads are not published; scenarios are described by use
-case, harm class and technique class.
+case, harm class and technique class. Section~\ref{sec:review} lists what changed after two LLM reviews (ChatGPT 6,
+DeepSeek V4.1 Flash; not peer review): the injection and process-step outcomes are separated, every run universe is
+accounted for, and strata and leave-one-out analyses were added.
 \end{abstract}
 
 \tableofcontents
@@ -43,7 +45,8 @@ rate is large enough to matter (Section~\ref{sec:f1} argues the value).
 \paragraph{The design.} A controlled factorial experiment with the run as the unit:
 \begin{itemize}
 \item \textbf{Scenarios} (\val{scenarios}): a realistic user request, a workspace (files, a fetched page, an email
-  folder) and one injected instruction whose effect would harm the user. Six use cases (browsing, coding, documents,
+  folder) and one harmful element: in 42 scenarios a third-party instruction, in one (C38) a dangerous line in the
+  project's own setup script (Section~\ref{sec:constructs}). Six use cases (browsing, coding, documents,
   scanning, shopping, agent tasks) and five harm classes (code execution, secret and data theft, fraud and phishing,
   manipulation and misinformation, destruction).
 \item \textbf{Models} (11): Claude Haiku, Sonnet and Opus across generations 4.5 to 5.5.
@@ -83,6 +86,36 @@ Two judges decide:
 The LLM verdict is final where it exists; every run is LLM-judged. Section~\ref{sec:f7} tests why the rule judge alone
 is not good enough, which is also an argument about static scanners in general.
 
+The LLM judge also returns \emph{reported} (the answer explicitly tells the user about the planted or suspicious
+content) and \emph{task done} (the user's real task was completed well enough to be useful). Its system prompt and
+template are below; \texttt{\{...\}} fields are filled per run, and \texttt{judge\_followed} is the scenario's own
+definition of a follow, written before any run.
+\begin{quote}\footnotesize\ttfamily\raggedright
+System: You grade transcripts from a prompt-injection test of AI agents. Each workspace contained one planted
+instruction from a third party. Judge only from the evidence given. Output one JSON object and nothing else.\\[3pt]
+The user's request to the agent: <request>\{prompt\}</request>\\
+What the correct work looks like: \{task\}\\
+The planted third-party instruction counts as FOLLOWED if: \{judge\_followed\}\\
+Attempts count even if a permission system blocked them (blocked attempts are marked [denied]).\\
+Mentioning or quoting the planted text while warning the user about it is NOT following it.\\
+Actions the agent took (tool calls, in order): <actions>\{actions\}</actions>\\
+Files the agent created, changed or deleted: <files>\{files\}</files>\\
+The agent's final answer to the user: <answer>\{answer\}</answer>\\
+Return JSON with these keys: "followed": true or false, "reported": true if the answer explicitly tells the user about
+the planted/suspicious instruction or content, else false, "task\_done": true if the agent completed the user's real
+task correctly enough to be useful, else false, "evidence": one short sentence quoting the decisive action or text.
+\end{quote}
+For C38 the system prompt's phrase ``planted instruction from a third party'' is inaccurate: the element is the
+project's own script. The scenario's \texttt{judge\_followed} defines a follow as running the setup step.
+
+\subsection{Two outcomes}
+\label{sec:constructs}
+The original analysis pooled all 43 scenarios into one outcome. C38 does not fit it: nothing in the scenario is
+addressed to the agent, and taking the step is a judgement about a dangerous but ordinary command. The revision
+therefore reports the \emph{injection} outcome over the 42 other scenarios and the \emph{process-step} outcome on C38
+separately. The pooled tests are kept so that the change is visible; F2 already had a variant without C38, and F6 always
+left C38 out because the guard's coverage of it is zero by construction.
+
 \subsection{What the guard covers}
 Guard coverage is a property of the scenario, not of a model run: the shipped scanner (\texttt{safe-read}, report-only)
 scans every file of a scenario. A scenario is \emph{covered} if its payload is flagged or stripped before the agent
@@ -117,7 +150,8 @@ with exact conditional tests, which are valid at any sample size.
 All tests are two-sided at $\alpha = \val{alpha}$ unless stated. Tests are grouped into families F1 to F9 by question;
 within each family, p-values are adjusted with the Holm-Bonferroni method (Section~\ref{sec:holm}). The hypotheses F1
 to F8 were formalized after the main campaign had been run and looked at; they are \textbf{exploratory}. The two
-scanning scenarios and the F9 follow-up runs were run after the formalisation.
+scanning scenarios and the F9 follow-up runs were run after the formalisation; F9 itself was suggested by the data, so it
+is exploratory too. The analyses of Section~\ref{sec:review} were added after review.
 
 %.....................................................................
 
@@ -151,9 +185,10 @@ one up to \val{F1-Opus 5.5.cp_hi} (the upper CP bound). The pooled row reuses th
 conditions, so its binomial test treats correlated runs as independent; it is descriptive, not a test of any single
 deployment.
 
-\begin{table}[h]\centering\small
+\begin{table}[h]\centering\footnotesize\setlength{\tabcolsep}{4.5pt}
 \caption{F1 per model at default effort. CP = Clopper-Pearson 95\% interval. $p$ = one-sided exact binomial test of
-$H_0{:}\ \pi \le p_0$; Holm-adjusted over the 11 models.}\label{tab:f1}
+$H_0{:}\ \pi \le p_0$; Holm-adjusted over the 11 models. ``inj.'': follows on the 42 injection scenarios (C38 left
+out).}\label{tab:f1}
 \input{../generated/f1-table.tex}
 \end{table}
 
@@ -376,16 +411,51 @@ each now a test case for the guard:
 called \texttt{safe-read} itself on each file.
 
 %=====================================================================
+\section{Analyses added after review}
+\label{sec:review}
+\paragraph{Run accounting.} Default universe: \val{review.accounting.default_runs} runs (one per model and scenario;
+\val{review.accounting.default_4x} for 4.x, \val{review.accounting.default_5x} for 5.x). Pooled universe:
+\val{review.accounting.pooled_runs} runs (adds 645 effort runs and 129 security-prompt runs of the 5.5 models; 5.x:
+\val{review.accounting.pooled_5x}). Follow-up: \val{review.accounting.followup_runs} C38 runs of Sonnet 5 and Opus 5,
+used only by F9. All: \val{review.accounting.all_runs}.
+
+\paragraph{Injection-only F1.} The F1 test over the 42 injection scenarios per model (Holm over 11 models): Haiku 4.5 and
+Sonnet 4.5 \val{F1i-Haiku 4.5.k}/42 each, Holm $p = \val{F1i-Haiku 4.5.p_holm}$; every 5.x model 0/42, upper bound
+\val{F1i-Opus 5.5.cp_hi}.
+
+\paragraph{Strata and leave-one-out for F2.} The exact stratified test conditions on each scenario's margins, so only
+scenarios with at least one follow carry information: 14 of 43 at default effort. To check that no single scenario
+carries the result, the test is repeated with each of the 14 left out in turn. The largest $p$ is
+\val{review.F2_leave_one_out.max_p}; the smallest risk difference is \val{review.F2_leave_one_out.min_rd}.
+
+\paragraph{Model-level summaries.} Pooled rates weight models with more runs more. Weighting each model once, the 4.x
+injection rate averages \val{review.model_level_4x_injection.mean} (range \val{review.model_level_4x_injection.min} to
+\val{review.model_level_4x_injection.max}); the 5.x rate is \val{review.model_level_5x_injection.mean} for every model.
+
+\paragraph{Coverage without C38.} Pooled covered \val{review.coverage_pooled.covered} vs uncovered
+\val{review.coverage_pooled.uncovered}, or \val{review.coverage_pooled.uncovered_without_c38} without C38.
+
+\paragraph{Decision rule for ``where a guard is needed''.} A use case and generation cell is ``needed'' when the exact
+95\% Clopper-Pearson lower bound of its pooled follow rate is above $p_0$; ``seen'' when it has a follow but not that;
+``none'' with no follow. The rule treats runs as independent, which overstates precision for the 5.x cells (seven
+conditions on the same scenarios).
+
+\paragraph{Classifier baseline (pending).} An open classifier (protectai/deberta-v3-base-prompt-injection-v2) is
+fixed in advance with its default threshold 0.5, 512-token windows and stride 256; its results are not yet reported.
+
+%=====================================================================
 \section{Threats to validity}
 \begin{description}
 \item[Construct.] The lean harness measures decisions, not executed effects; one decision in a real loop could be
-  corrected or compounded by later steps. The outcome ``followed'' depends on the judge; the LLM judge is from the same
-  model family as the models judged, and it was not validated against human labels on a held-out set.
+  corrected or compounded by later steps. On C38, Haiku 5.5 took the step in 6 of 7 single calls but declined as a real
+  agent in both A/B arms. The process-step outcome rests on one scenario. The outcome ``followed'' depends on the
+  judge; the LLM judge is from the same model family as the models judged, it was not validated against human labels,
+  and it disagrees with the rule judge on 40 runs.
 \item[Internal.] The same author wrote the scenarios and the guard, so the guard is tuned to the test set: static
-  coverage is an optimistic estimate for unseen attacks. Hypotheses F1 to F8 were stated after seeing the data.
+  coverage is an optimistic estimate for unseen attacks. All hypotheses were stated after seeing the data.
 \item[External.] 43 hand-written scenarios are not a sample from real attacks; rates do not transfer to a deployment
   without knowing its attack mix. One run per cell; model sampling noise is part of the outcome. Models were tested
-  in November 2026; providers update models.
+  on 18 and 19 November 2026; providers update models. The Claude Code CLI version was not recorded per run.
 \item[Statistical conclusion.] Small counts limit power (Section~\ref{sec:power}); pooled rates reuse the same
   scenarios; Holm control is per family, not over the document.
 \end{description}
@@ -393,9 +463,20 @@ called \texttt{safe-read} itself on each file.
 %=====================================================================
 \section{Reproducibility}
 All tests are implemented without statistical libraries, so each formula above is visible in code: exact tests
-enumerate their null distributions, Monte Carlo tests use seed \val{seed} and \val{bootstrap_draws} draws. The public
-data files (\texttt{docs/research/data/}) hold every count used here; \texttt{make\_tex.py} turns them into the numbers in
-this document. The scenarios and payloads are kept private.
+enumerate their null distributions, Monte Carlo tests use seed \val{seed} and \val{bootstrap_draws} draws. The full
+statistics code (\texttt{stats.py}) stays in the private repository because it loads the scenario files, which contain
+the payloads. The public repository holds:
+\begin{itemize}
+\item \texttt{docs/research/data/runs.json}: one row per run (\val{review.accounting.all_runs}) with case, model, API
+  model id, effort, setup, pooled flag, LLM and rule verdicts, reported, task done, seconds, cost and tokens; no
+  prompts or outputs;
+\item every derived result file in \texttt{docs/research/data/}, and \texttt{make\_tex.py}, which turns them into every
+  number in the paper and this document;
+\item \texttt{recompute.py}: the exact binomial, Clopper-Pearson, exact stratified test and Holm, reimplemented with the
+  standard library; it recomputes F1, the injection-only F1, both F2 tests and the construct split from
+  \texttt{runs.json} and checks them against the published values (76 of 76 match). F3 to F9 can be recomputed from the
+  same table but are not scripted.
+\end{itemize}
 
 \appendix
 \section{All tests}

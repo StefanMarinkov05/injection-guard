@@ -31,7 +31,7 @@ flowchart LR
 | `docs/MECHANISMS.md`, `docs/mechanisms.tex`, `docs/build/mechanisms.pdf` | generated: every mechanism with its tests and their last result | never by hand: `docs/gen_docs.py` |
 | `docs/gen_docs.py` | the catalogue (`M`), red-team log (`REDTEAM`), false-alarm log (`CALIBRATION`), `--check` for CI | every new test |
 | `docs/BACKLOG.md` | known limits and open ideas | when a limit is found or closed |
-| `docs/research/` | paper and methods document (LaTeX, `build/*.pdf`), the public result data (`data/*.json`: counts, tests, case descriptions, no payloads), `make_tex.py` turning data into every number in the text | after a new campaign: export from the red team (`public_data.py`), then `make_tex.py` and a LaTeX build |
+| `docs/research/` | paper and methods document (LaTeX, `build/*.pdf`), the public result data (`data/*.json`: counts, tests, case descriptions, no payloads), `make_tex.py` turning data into every number in the text, `data/runs.json` (one row per run) and `recompute.py` (recomputes the headline tests from it) | after a new campaign: export from the red team (`public_data.py`), then `make_tex.py`, `recompute.py` (must print "all recomputed numbers match") and a LaTeX build |
 | `docs/MAINTENANCE.md`, `CONTRIBUTING.md`, `SECURITY.md` | how to run, change, release and report | rarely |
 | `redteam/` | **private, gitignored**: generated attack corpus, evaluator, live agent A/B runner | red-team rounds |
 | `CLAUDE.md` / `CLAUDE.local.md` | instructions for agents working on this repo / local paths (gitignored) | rarely |
