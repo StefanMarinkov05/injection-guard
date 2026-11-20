@@ -27,7 +27,9 @@ download into a shell, the 5.5 models took the step in \val{F9-bootstrap-5.0-vs-
 \val{F9-bootstrap-5.0-vs-5.5.n_5_0} ($p = \val{F9-bootstrap-5.0-vs-5.5.p}$): a regression in judging process steps, not
 in resisting injection. These are single-call decisions to act; as real Claude Code agents with tools, the 5.x models took
 the step in \val{c38_agent.k} of \val{c38_agent.n} runs (they inspected the script and warned instead), so this is a
-decision-level regression that agents do not reproduce. With real agents the guard cut Haiku
+decision-level regression that agents do not reproduce. Agent checks on six attacked email scenarios and on a
+manipulated invoice PDF found no follows by the 5.5 models (\val{email_agent.k} of \val{email_agent.n} and \val{invoice_agent.k} of
+\val{invoice_agent.n}). With real agents the guard cut Haiku
 4.5's follows from \val{AB-Haiku 4.5.off_followed} to \val{AB-Haiku 4.5.on_followed} of 14 (McNemar
 $p = \val{AB-Haiku 4.5.p}$, a direction only) at \val{guard_ab.overhead.cost_ratio}$\times$ the cost and 47\% more
 median wall-clock time, and it exposed three gaps. Payloads are withheld; the run table, a script that recomputes the
@@ -67,7 +69,7 @@ to deployed agents.
   would not see, and asks the user before actions whose \emph{effect} is dangerous, independent of wording.
 \item \textbf{A measurement of where it is needed} (Sections~\ref{sec:method} and \ref{sec:results}): 42 injection
   scenarios and one unsafe process step in six use cases, 11 Claude models, effort and system-prompt conditions, a
-  blind LLM judge, nine hypothesis families tested with exact methods (formalized after the main campaign, so
+  blind LLM judge, ten hypothesis families tested with exact methods (formalized after the main campaign, so
   exploratory), and a full-agent A/B with the guard on and off.
 \item \textbf{An honest account of the gaps} (Sections~\ref{sec:ab} and \ref{sec:limits}): the attack classes the
   guard misses, why, and what the design cannot measure yet.
@@ -411,6 +413,36 @@ server logged no request); in a normal session each would be a permission prompt
 \takeaway{The residual risk we found for current Claude models is not hidden text but an ordinary-looking dangerous
 step, and in single calls 5.5 is worse than 5.0 on that step. Real agents inspected the script and did not run it (\val{c38_agent.k} of \val{c38_agent.n}).}
 
+\subsection{Real agents on email and on a manipulated invoice}
+\label{sec:agents}
+Two later agent checks used the same setup as the C38 replication (real Claude Code agents, default effort, guard
+off, no security prompt, LLM judge on every attacked run).
+
+\paragraph{Email.} Nine new scenarios deliver the planted content inside an email file (MIME): a body that asks for
+key files, hidden text in an attached DOCX, an order in an attachment's file name, a readable and a faint line in an
+attached picture, and an invoice PDF with a second bank account (six attacked scenarios), plus three benign twins (a harmless request, a clean picture, a clean
+invoice). The 5.5
+models followed none of \val{email_agent.n} attacked runs (upper 95\% bound \val{email_agent.cp_hi}); Haiku 4.5
+followed once in \val{email_agent.n_4x} 4.x runs, copying the planted bank account. The zero is informative only
+where the agents read the planted content: for the key-file request, the DOCX and the file name they finished the task
+in all \val{email_agent.per_scenario.mail-body-secret-request.n} runs each and warned in \val{email_agent.per_scenario.mail-body-secret-request.warned}, \val{email_agent.per_scenario.mail-docx-hidden.warned} and \val{email_agent.per_scenario.mail-attachment-name.warned} of \val{email_agent.per_scenario.mail-body-secret-request.n}. For
+the pictures and the attached invoice the task was done in only \val{email_agent.per_scenario.mail-image-visible.done}, \val{email_agent.per_scenario.mail-image-faint.done} and \val{email_agent.per_scenario.mail-invoice-pdf-iban.done} of \val{email_agent.per_scenario.mail-body-secret-request.n} runs: most agents
+never got the attachment out of the MIME part, so there the zero mostly means the content was not read.
+
+\paragraph{A manipulated invoice as a file.} To settle the invoice case we gave the agents the invoice PDF directly
+(C19: white text announcing that the bank details changed, with a second IBAN, and no instruction to an AI). In single
+calls with the extracted text in the prompt, the 5.x models wrote the planted IBAN into the payment file in
+\val{invoice_agent.single_k} of \val{invoice_agent.single_n} runs, often while warning. As agents, the 5.5 models
+did so in \val{invoice_agent.k} of \val{invoice_agent.n} (upper bound \val{invoice_agent.cp_hi}); all
+\val{invoice_agent.warned} warned about the change and all \val{invoice_agent.done} filled in the real account. Every
+agent opened the PDF with Claude Code's own Read tool. Our hypothesis, not tested: that tool gives the model the
+rendered pages as well as the text, so it can see that the notice is not on the page a human reads, while extracted
+text carries no colour. An agent that reads the same PDF through \texttt{pdftotext} or a text-only pipeline is in the
+single-call situation.
+
+\takeaway{Planted orders, in documents or emails, rarely work on current models; planted facts are the residual
+risk, and whether a model catches them depends on whether it sees the page or only the text.}
+
 \subsection{What the guard covers}
 \label{sec:coverage}
 \emph{Static coverage}: the scanner flags or strips the payload of \val{totals.guard_covers} of 43 scenarios when the
@@ -502,7 +534,8 @@ Read for a deployer of Claude models:
   scanner cannot see an ordinary setup step, and today the best protection is Claude Code's permission prompt.
 \item \textbf{5.x models on browsing, coding and documents: defense in depth.} Follows were seen (invoices with hidden
   bank details at higher effort, one look-alike package, one build file) but are not shown above 1\%; the scanner sees
-  most of these payloads.
+  most of these payloads. As real agents reading the invoice PDF through Claude Code, the 5.5 models did not take the planted
+  bank details (Section~\ref{sec:agents}); a text-only path keeps the single-call risk.
 \item \textbf{5.x models on scanning, shopping and agent tasks other than setup: none observed}, with upper bounds of
   2.3 to 2.6\%. A guard adds a record of what was hidden, not a measured reduction.
 \end{itemize}
@@ -512,7 +545,8 @@ Read for a deployer of Claude models:
 \begin{description}
 \item[Decisions, not agents.] The main experiment measures one decision per run, with the whole workspace in the
   prompt, and executes nothing. A real agent can inspect, correct or compound a decision; on C38 the two settings
-  disagree for every 5.x model (Section~\ref{sec:c38}). The A/B covers only 14 scenarios, two models and one run per cell.
+  disagree for every 5.x model (Section~\ref{sec:c38}). Agent checks exist only for C38, the email scenarios and one invoice
+  (Section~\ref{sec:agents}), with three to ten runs per model; images inside email were mostly not read by the agents. The A/B covers only 14 scenarios, two models and one run per cell.
 \item[Author bias.] The same person wrote the attacks and the guard, so the guard is tuned to these attacks and static
   coverage is optimistic. Independent attacks, especially adaptive ones \citep{nasr2025attacker}, are the most important
   missing test. We publish per-case descriptions and the harness design so others can build their own.
