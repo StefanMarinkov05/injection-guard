@@ -1,7 +1,7 @@
 """Shared patterns, findings, text checks, config and scan registry for injection-guard."""
 import base64, codecs, hashlib, html, json, os, re, time, unicodedata, urllib.parse
 
-VERSION = "1.8.0"
+VERSION = "1.8.1"
 HOME = os.path.expanduser("~")
 CACHE = os.path.join(HOME, ".cache", "injection-guard")
 REGISTRY = os.path.join(CACHE, "scanned")

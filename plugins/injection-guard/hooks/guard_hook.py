@@ -160,6 +160,32 @@ ENFORCEMENT = (os.sep + "hooks" + os.sep, os.sep + ".claude-plugin" + os.sep)
 INTERP_WRITE = re.compile(r"\b(python[\d.]*|perl|ruby|node)\b[\s\S]*?(open\([^)]*,\s*['\"][wax+]|write_(text|bytes)\b|"
                           r"\bshutil\.|\bos\.(remove|unlink|rename|replace|rmdir)\b|\.unlink\(|writeFileSync|appendFileSync|"
                           r"File\.write)|\bperl\s+-\w*i")
+# shell commands that write, replace or delete files (B15: install, rsync, patch, archive extraction and git restores count too)
+SHELL_WRITE = re.compile(r"\b(rm|mv|cp|tee|sed\s+-i|chmod|ln|truncate|dd|install|rsync|patch|unzip|shred)\b|\btar\b[^|;&\n]*\s-{0,2}[a-zA-Z]*x"
+                         r"|\bgit\b[^|;&\n]*\b(checkout|restore|reset|apply|am|clean)\b|\bfind\b[^|;&\n]*\s-(delete|exec)\b|>")
+# inline interpreter code that talks to the network (B21: the same send as curl -d, written in Python, Node, Perl, Ruby or PHP)
+INTERP_NET = re.compile(r"\b(python[\d.]*|node|deno|bun|perl|ruby|php)\b[\s\S]*?(\burllib\b|\burlopen\b|\brequests\.(get|post|put|patch|delete|"
+                        r"request|Session)\b|\bhttp\.client\b|\bHTTPS?Connection\b|\bhttpx\b|\baiohttp\b|\bsocket\.(create_connection|socket)\b|"
+                        r"\bfetch\(|\bhttps?\.request\(|\bnet\.(connect|createConnection)\b|\bLWP::|\bHTTP::Tiny\b|\bNet::HTTP\b|\bIO::Socket\b|"
+                        r"\bcurl_exec\b|\bfile_get_contents\(\s*['\"]https?:)")
+
+
+def write_targets(cmd):
+    """Paths a shell command writes to: redirect and tee targets, the last argument of cp/mv/install/rsync/ln, sed -i
+    files, and every path named by inline interpreter code that writes."""
+    out = re.findall(r"(?<![<\d&])>>?\|?\s*[\"']?([~\w./-]+)", cmd)
+    out += re.findall(r"\btee\s+(?:-a\s+)?[\"']?([~\w./-]+)", cmd)
+    for seg in re.split(r"[;&|\n]+", cmd):
+        w = re.findall(r"[~\w./-]+", seg)
+        if w and w[0] in ("cp", "mv", "install", "rsync", "ln") and len(w) > 1:
+            out.append(w[-1])
+        if w and w[0] == "sed" and re.search(r"\s-i", seg):
+            out += [x for x in w[1:] if not x.startswith("-")][1:]
+    if INTERP_WRITE.search(cmd):
+        out += re.findall(r"[~\w./-]*[/.][\w./-]+", cmd)
+    return out
+
+
 NET_WORDS = {"curl", "wget", "http", "https", "httpie", "xh", "aria2c", "lynx", "w3m", "links", "nc", "ncat", "netcat", "socat",
              "ssh", "scp", "sftp", "ftp", "rsync", "aws", "gcloud", "gsutil", "rclone", "safe-fetch", "gh"}
 TEXT_TOOLS = {"grep", "egrep", "fgrep", "rg", "ag", "sed", "awk", "echo", "printf", "cat", "head", "tail", "less", "wc", "sort", "cut"}
@@ -184,7 +210,7 @@ def dev_unlocked(path, cfg, taint):
     repo = os.path.realpath(os.path.expanduser("~/Projects/injection-guard"))
     if not rp.startswith(repo + os.sep):
         return False
-    return not (taint and any(e in rp[len(repo):] for e in ENFORCEMENT))
+    return not (taint and any(e in rp[len(repo):] + os.sep for e in ENFORCEMENT))
 
 
 def gated(path, cfg):
@@ -398,6 +424,8 @@ def risk(cmd):
         return "it sends data to another machine or publishes it"
     if URL_DATA.search(cmd):
         return "it requests a URL that carries a long block of data"
+    if INTERP_NET.search(cmd):
+        return "its inline code talks to the network (the same as curl, written in a script language)"
     if INSTALL.search(cmd):
         return "it installs or runs third-party packages"
     if PERSIST_CMD.search(cmd):
@@ -502,9 +530,18 @@ def pre(data, cfg):
         touches = [w for w in re.findall(r"[~\w./-]+", cmd) if is_protected(w)]
         if touches and not re.match(r"^(safe-read|safe-fetch)\b", stripped) and not re.search(r"\btests?/run_tests\.py\b|python3? -I -m unittest", cmd):
             unlocked = all(dev_unlocked(w, cfg, taint) for w in touches) and not re.search(r"\brm\s+-\w*[rR]", cmd)
-            if (re.search(r"\b(rm|mv|cp|tee|sed\s+-i|chmod|ln|truncate|dd)\b|>", cmd) or INTERP_WRITE.search(cmd)) and not unlocked:
+            if (SHELL_WRITE.search(cmd) or INTERP_WRITE.search(cmd)) and not unlocked:
                 ask(f"injection-guard: this command modifies the guard's own files or scan registry ({touches[0]}). "
                     f"Allow only if you asked for it.")
+        if cfg["mode"] != "off":
+            targets = [os.path.join(cwd or "", t) if not t.startswith(("/", "~")) else t for t in write_targets(cmd)]
+            if any(os.path.basename(t) in ("settings.json", "settings.local.json") and "/.claude/" in os.path.expanduser(t)
+                   for t in targets):
+                ask("injection-guard: this shell command writes Claude Code settings (hooks, permissions, plugins). The Edit "
+                    "tool shows the change; a shell write does not. Allow only if you asked for it.")
+            cfg_t = [t for t in targets if is_persist_file(t)]
+            if taint and cfg_t:
+                ask(tainted_reason(taint, f"it writes {cfg_t[0]}, a file that later sessions load as instructions or that runs on its own"))
         if re.search(r"\bclaude\s+plugins?\s+(disable|uninstall|remove)\b.*(injection-guard|agent-guard)", cmd):
             ask("injection-guard: this disables or removes the guard plugin. Allow only if you asked for it.")
         for p in doc_paths(cmd, cwd):
