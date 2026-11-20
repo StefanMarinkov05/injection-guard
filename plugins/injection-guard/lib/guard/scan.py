@@ -29,6 +29,9 @@ def detect(path):
         return "rtf"
     if b"\x00" in head and not head.startswith((b"\xff\xfe", b"\xfe\xff")):
         return "binary"
+    from .mail import looks_like_email
+    if ext == ".eml" or looks_like_email(head):
+        return "email"
     low = head.lower()
     if ext in HTML_EXT or re.search(rb"<!doctype html|<html[\s>]|<body[\s>]|<svg[\s>]", low):
         return "html"
@@ -89,6 +92,9 @@ def _scan_file(path, kind, F, max_pages, image_dir, ocr_pages, reference=None):
     elif kind == "html":
         from .web import sanitize_html
         text = sanitize_html(read_text(path), F, os.path.basename(path))
+    elif kind == "email":
+        from .mail import scan_email
+        text = scan_email(path, F)
     elif kind == "rtf":
         raw = read_text(path)
         if re.search(r"\\v(?![a-z])", raw):

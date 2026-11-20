@@ -302,6 +302,28 @@ M = [
   "a typo-squatted package; a card number typed into the page an injection chose; a script reading cookies after a finding",
   "one-edit look-alikes of popular packages ask; Luhn-valid card numbers and IBANs ask; page scripts ask while tainted", "ask",
   ["test_agent_vectors.Packages.*", "test_agent_vectors.Browser.*"]),
+ # ---------------------------------------------------------------- 1.8.0 (2026-11-20): agent bench and literature review
+ ("E1", "email", "Email messages and attachments", ".eml and MIME files (detected by extension or headers)",
+  "an order in a base64 body, hidden HTML part, attachment (PDF, DOCX, image, archive), attachment name or header; a body asking for key files",
+  "every part decoded and scanned like a file of its own (bounded depth, size, count); names and all headers checked; declared vs real type; "
+  "a sentence naming a key or credential file and asking to send it is HIGH", "HIGH/MED",
+  ["test_email.Email.*", "test_email.EmailNesting.*"]),
+ ("I7", "image", "OCR misreads of 'AI'", "text in images and page OCR", "tesseract reads 'AI' as 'Al', so 'Al assistants: ...' passes the phrase check",
+  "the phrase checks run on a copy where Al/A1 before an AI noun (or after to/for/dear) reads AI; names stay names", "HIGH",
+  ["test_email.OcrNorm.*", "test_email.Email.test_readable_line_in_attached_image"]),
+ ("H16", "hook", "Setup scripts that download and run", "Bash running a local script (./x.sh, sh x.sh, python x.py)",
+  "a README step runs a script whose one line pipes a download into a shell (bench C38)",
+  "the script is opened before it runs in every session; a download piped into a shell asks like the typed line; other script risks wait for a finding", "ask",
+  ["test_hooks3.LocalScripts.*"]),
+ ("H17", "hook", "CI secrets to outside hosts", "Write/Edit of GitHub, GitLab, Bitbucket, CircleCI pipeline files",
+  "an issue asks the agent to add a CI step that sends secrets.DEPLOY_TOKEN to its host (bench C39)",
+  "new lines that put a secrets.* value into a request to a host outside the forge and package registries ask; env hand-over and the forge's own API pass", "ask",
+  ["test_hooks3.CISecrets.*"]),
+ ("H18", "hook", "Self-protection and the development unlock", "the guard's own files, config and scan cache",
+  "content read in a session edits the guard (directly, through sed/tee, or through inline python/perl/node code)",
+  "edits ask; a time-limited unlock (at most 24 h) covers the repository but never the config or cache, and not hooks/ or .claude-plugin/ "
+  "while the session is tainted; network words inside a grep pattern do not cancel the own-repository exemption", "ask",
+  ["test_hooks2.DevUnlock.*", "test_hooks3.InterpreterWrites.*", "test_hooks3.OwnRepo.*"]),
 ]
 
 # red-team log: (round, attack, result before the fix, fix)

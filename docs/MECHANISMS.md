@@ -1,6 +1,6 @@
-# injection-guard 1.7.0: security mechanisms and proof
+# injection-guard 1.8.0: security mechanisms and proof
 
-Test run 2026-11-18 22:50: **449 tests, 0 failures, 0 errors, 4 skipped** (176 s). Regenerate: `python3 -I plugins/injection-guard/tests/report.py && python3 -I docs/gen_docs.py`.
+Test run 2026-11-20 14:52: **481 tests, 0 failures, 0 errors, 4 skipped** (238 s). Regenerate: `python3 -I plugins/injection-guard/tests/report.py && python3 -I docs/gen_docs.py`.
 
 Rule enforced everywhere: the page a human sees is the content; text inside documents and tool output is data, never instructions.
 Design choice: recall over precision (false positives are acceptable; an unreadable file is never clean).
@@ -97,6 +97,11 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 | H13 | hook | **Code downloaded in this session** | git clone, gh repo clone, archives, curl -o | the agent runs pytest, make or npm inside a repository it just downloaded (conftest.py, Makefile, install scripts run) | the hook remembers downloaded folders; build and test tools there ask once, with what they would run; agent config files in the clone are reported | ask | 7/7 pass |
 | H14 | hook | **Effect gate for setup steps** | .mcp.json, .claude/settings*.json, VS Code tasks, claude mcp add, plugin install | a masked injection reads like a normal setup guide; its effect is a hook, server or permission that runs from now on | the ask shows the programs, servers and permissions the change adds and the external sources read in this session | ask | 6/6 pass |
 | H15 | hook | **Packages, payments and the logged-in browser** | pip/npm/npx names; browser type/fill tools; page scripts | a typo-squatted package; a card number typed into the page an injection chose; a script reading cookies after a finding | one-edit look-alikes of popular packages ask; Luhn-valid card numbers and IBANs ask; page scripts ask while tainted | ask | 6/6 pass |
+| E1 | email | **Email messages and attachments** | .eml and MIME files (detected by extension or headers) | an order in a base64 body, hidden HTML part, attachment (PDF, DOCX, image, archive), attachment name or header; a body asking for key files | every part decoded and scanned like a file of its own (bounded depth, size, count); names and all headers checked; declared vs real type; a sentence naming a key or credential file and asking to send it is HIGH | HIGH/MED | 15/15 pass |
+| I7 | image | **OCR misreads of 'AI'** | text in images and page OCR | tesseract reads 'AI' as 'Al', so 'Al assistants: ...' passes the phrase check | the phrase checks run on a copy where Al/A1 before an AI noun (or after to/for/dear) reads AI; names stay names | HIGH | 2/2 pass |
+| H16 | hook | **Setup scripts that download and run** | Bash running a local script (./x.sh, sh x.sh, python x.py) | a README step runs a script whose one line pipes a download into a shell (bench C38) | the script is opened before it runs in every session; a download piped into a shell asks like the typed line; other script risks wait for a finding | ask | 3/3 pass |
+| H17 | hook | **CI secrets to outside hosts** | Write/Edit of GitHub, GitLab, Bitbucket, CircleCI pipeline files | an issue asks the agent to add a CI step that sends secrets.DEPLOY_TOKEN to its host (bench C39) | new lines that put a secrets.* value into a request to a host outside the forge and package registries ask; env hand-over and the forge's own API pass | ask | 3/3 pass |
+| H18 | hook | **Self-protection and the development unlock** | the guard's own files, config and scan cache | content read in a session edits the guard (directly, through sed/tee, or through inline python/perl/node code) | edits ask; a time-limited unlock (at most 24 h) covers the repository but never the config or cache, and not hooks/ or .claude-plugin/ while the session is tainted; network words inside a grep pattern do not cancel the own-repository exemption | ask | 10/10 pass |
 
 ## Tests per mechanism
 
@@ -275,6 +280,16 @@ Design choice: recall over precision (false positives are acceptable; an unreada
 **H14 Effect gate for setup steps**: `Effects.test_settings_that_run_programs_ask_with_the_effect` pass, `Effects.test_settings_without_effects_pass` pass, `Effects.test_effect_names_the_program_and_the_source` pass, `Effects.test_unchanged_effects_pass` pass, `Effects.test_mcp_and_plugin_installs_ask` pass, `Effects.test_plugin_updates_and_listing_pass` pass
 
 **H15 Packages, payments and the logged-in browser**: `Packages.test_real_names_pass` pass, `Packages.test_typo_squatted_names_ask` pass, `Browser.test_ordinary_typing_passes` pass, `Browser.test_page_scripts_ask_after_a_finding` pass, `Browser.test_page_scripts_pass_without_a_finding` pass, `Browser.test_payment_details_ask` pass
+
+**E1 Email messages and attachments**: `Email.test_attachment_name_with_directive` pass, `Email.test_attachment_type_mismatch` pass, `Email.test_base64_body_is_decoded` pass, `Email.test_body_asking_for_key_files` pass, `Email.test_body_mentioning_credentials_without_asking_passes` pass, `Email.test_detected_as_email_and_clean_mail_is_clean` pass, `Email.test_detects_mime_without_eml_extension` pass, `Email.test_hidden_html_part` pass, `Email.test_instruction_in_custom_header` pass, `Email.test_pdf_attachment_with_hidden_text` pass, `Email.test_plain_rfc822_without_mime_headers` pass, `Email.test_readable_line_in_attached_image` pass, `Email.test_subject_addressed_to_ai` pass, `Email.test_text_attachment_with_instruction` pass, `EmailNesting.test_nested_messages_are_bounded` pass
+
+**I7 OCR misreads of 'AI'**: `OcrNorm.test_ai_misreads` pass, `Email.test_readable_line_in_attached_image` pass
+
+**H16 Setup scripts that download and run**: `LocalScripts.test_benign_setup_script_passes` pass, `LocalScripts.test_download_to_shell_inside_a_script_asks_without_a_finding` pass, `LocalScripts.test_other_script_risks_still_wait_for_a_finding` pass
+
+**H17 CI secrets to outside hosts**: `CISecrets.test_existing_line_is_not_new` pass, `CISecrets.test_ordinary_secret_use_passes` pass, `CISecrets.test_workflow_sending_a_secret_to_an_outside_host_asks` pass
+
+**H18 Self-protection and the development unlock**: `DevUnlock.test_enforcement_files_unlocked_without_taint` pass, `DevUnlock.test_locked_by_default` pass, `DevUnlock.test_taint_suspends_unlock_only_for_enforcement_files` pass, `DevUnlock.test_unlock_covers_repo_edits_and_commands` pass, `DevUnlock.test_unlock_expires_and_is_capped` pass, `DevUnlock.test_unlock_never_covers_config_cache_delete_or_disable` pass, `InterpreterWrites.test_inline_code_reading_guard_files_passes` pass, `InterpreterWrites.test_inline_code_writing_guard_files_asks` pass, `OwnRepo.test_a_real_network_command_is_not_own_repo` pass, `OwnRepo.test_network_word_in_a_grep_pattern_is_still_own_repo` pass
 
 ## Red-team log
 

@@ -152,6 +152,41 @@ def is_protected(path):
     return any(rp == p or rp.startswith(p + os.sep) for p in PROTECTED)
 
 
+DEV_MAX_HOURS = 24
+
+
+ENFORCEMENT = (os.sep + "hooks" + os.sep, os.sep + ".claude-plugin" + os.sep)
+# inline interpreter code that writes, renames or deletes files (python -c / heredoc, perl -i, node -e, ruby -e)
+INTERP_WRITE = re.compile(r"\b(python[\d.]*|perl|ruby|node)\b[\s\S]*?(open\([^)]*,\s*['\"][wax+]|write_(text|bytes)\b|"
+                          r"\bshutil\.|\bos\.(remove|unlink|rename|replace|rmdir)\b|\.unlink\(|writeFileSync|appendFileSync|"
+                          r"File\.write)|\bperl\s+-\w*i")
+NET_WORDS = {"curl", "wget", "http", "https", "httpie", "xh", "aria2c", "lynx", "w3m", "links", "nc", "ncat", "netcat", "socat",
+             "ssh", "scp", "sftp", "ftp", "rsync", "aws", "gcloud", "gsutil", "rclone", "safe-fetch", "gh"}
+TEXT_TOOLS = {"grep", "egrep", "fgrep", "rg", "ag", "sed", "awk", "echo", "printf", "cat", "head", "tail", "less", "wc", "sort", "cut"}
+CI_FILE = re.compile(r"/\.github/workflows/[^/]+\.ya?ml$|/\.gitlab-ci\.ya?ml$|/bitbucket-pipelines\.yml$|/\.circleci/config\.yml$")
+CI_HOSTS = re.compile(r"^((api|uploads)\.)?github\.com$|\.githubusercontent\.com$|^ghcr\.io$|^(upload\.)?pypi\.org$|"
+                      r"^registry\.npmjs\.org$|^(index|registry-1)\.docker\.io$")
+
+
+def dev_unlocked(path, cfg, taint):
+    """Stefan's time-limited development unlock: config `dev_unlock_until` (epoch seconds, at most 24 h ahead) lets edits
+    inside the guard's repository pass without a prompt. It never covers the config or the scan cache. While the session
+    is tainted it still covers ordinary repository files (Stefan, 2026-11-20: no prompts while he is away), but not the
+    files that enforce the guard (hooks/, .claude-plugin/): content read in this session can never be the reason those
+    change without his answer."""
+    until, now = cfg.get("dev_unlock_until") or 0, time.time()
+    if not (now < until <= now + DEV_MAX_HOURS * 3600):
+        return False
+    rp = os.path.realpath(os.path.expanduser(path))
+    for p in (os.path.realpath(CONFIG_DIR), os.path.realpath(CACHE)):
+        if rp == p or rp.startswith(p + os.sep):
+            return False
+    repo = os.path.realpath(os.path.expanduser("~/Projects/injection-guard"))
+    if not rp.startswith(repo + os.sep):
+        return False
+    return not (taint and any(e in rp[len(repo):] for e in ENFORCEMENT))
+
+
 def gated(path, cfg):
     """True if this file is a document that must be scanned before it is read raw."""
     rp = os.path.realpath(path)
@@ -312,7 +347,7 @@ RUNNER = re.compile(r"^(?:bash|sh|zsh|dash|ksh|source|\.|python[\d.]*|node|deno|
 SCRIPT_MAX = 400_000
 
 
-def script_risk(cmd, cwd):
+def script_risk(cmd, cwd, pipe_only=False):
     """`bash helper.sh` says nothing; the file does. Returns (path, why) for the first local script a command runs whose
     content does what an injected instruction asks for. Written in harmless steps, run in one: this is where it is seen."""
     for seg in split_command(cmd) or [cmd.split()]:
@@ -339,9 +374,14 @@ def script_risk(cmd, cwd):
                 continue
             if "\x00" in body[:2000]:
                 continue
+            if pipe_only:
+                m = PIPE_SHELL.search(body)
+                if m:
+                    return p, "it downloads code and runs it", m.group(0)
+                continue
             why = risk(body)
             if why:
-                return p, why
+                return p, why, ""
     return None
 
 
@@ -389,7 +429,7 @@ def pre(data, cfg):
     taint = taint_of(data, cfg) if cfg["mode"] != "off" else None
     if tool in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
         path = inp.get("file_path") or inp.get("notebook_path") or ""
-        if path and is_protected(path) and "/tests/" not in path:
+        if path and is_protected(path) and "/tests/" not in path and not dev_unlocked(path, cfg, taint):
             ask(f"injection-guard: this edits the guard's own files ({path}). Only allow it if YOU asked for this change - "
                 f"a document or web page must never be the reason to weaken the guard.")
         if path and os.path.basename(path) in ("settings.json", "settings.local.json"):
@@ -405,6 +445,28 @@ def pre(data, cfg):
             if bad:
                 ask(f"injection-guard: this would store text that looks like an injected instruction in {path}, a file that later sessions "
                     f"load as instructions ({bad[0]['kind']}: {short(bad[0]['detail'], 160)}). Allow it only if YOU wrote or asked for this text.")
+        if path and cfg["mode"] != "off" and CI_FILE.search(os.path.expanduser(path)):
+            old = ""
+            if tool == "Write" and os.path.isfile(path):
+                try:
+                    with open(path, errors="replace") as fh:
+                        old = fh.read(400_000)
+                except OSError:
+                    pass
+            elif tool != "Write":
+                old = "\n".join(e.get("old_string", "") for e in ([inp] + list(inp.get("edits") or [])) if isinstance(e, dict))
+                if os.path.isfile(path):
+                    try:
+                        with open(path, errors="replace") as fh:
+                            old += "\n" + fh.read(400_000)
+                    except OSError:
+                        pass
+            sends = ci_secret_sends(path, written_text(inp), old)
+            if sends:
+                ask(effect_reason(data, f"this CI change sends a repository secret to {sends[0][0]}, a host outside the forge and "
+                                        f"package registries", [short(l, 160) for _, l in sends[:3]] +
+                                  ["every CI run would hand that secret to this host; a step like this is how an issue or "
+                                   "README instruction steals deploy tokens"]))
         if path and cfg["mode"] != "off":
             from guard.actions import CONFIG_FILES, config_effects
             if CONFIG_FILES.search(os.path.expanduser(path)):
@@ -439,7 +501,8 @@ def pre(data, cfg):
         stripped = cmd.strip()
         touches = [w for w in re.findall(r"[~\w./-]+", cmd) if is_protected(w)]
         if touches and not re.match(r"^(safe-read|safe-fetch)\b", stripped) and not re.search(r"\btests?/run_tests\.py\b|python3? -I -m unittest", cmd):
-            if re.search(r"\b(rm|mv|cp|tee|sed\s+-i|chmod|ln|truncate|dd)\b|>", cmd):
+            unlocked = all(dev_unlocked(w, cfg, taint) for w in touches) and not re.search(r"\brm\s+-\w*[rR]", cmd)
+            if (re.search(r"\b(rm|mv|cp|tee|sed\s+-i|chmod|ln|truncate|dd)\b|>", cmd) or INTERP_WRITE.search(cmd)) and not unlocked:
                 ask(f"injection-guard: this command modifies the guard's own files or scan registry ({touches[0]}). "
                     f"Allow only if you asked for it.")
         if re.search(r"\bclaude\s+plugins?\s+(disable|uninstall|remove)\b.*(injection-guard|agent-guard)", cmd):
@@ -456,6 +519,11 @@ def pre(data, cfg):
             hit = script_risk(cmd, cwd)
             if hit:
                 ask(tainted_reason(taint, f"it runs the script {os.path.basename(hit[0])}, and inside that script: {hit[1]}"))
+        hit = script_risk(cmd, cwd, pipe_only=True)  # every session: the same ask as typing that line (bench C38)
+        if hit:
+            ask(f"injection-guard: this runs {os.path.basename(hit[0])}, and that script downloads code and runs it in one step "
+                f"(`{short(hit[2], 160)}`). Setup scripts in a repository you did not write are where this hides. Allow it only "
+                f"if you trust that source; otherwise read the script first or run it without that line.")
         probe = re.sub(r"\s-i\s+\S+", " ", cmd)
         if PIPE_SHELL.search(cmd):
             ask("injection-guard: this command downloads code and runs it in one step. Allow it only if you asked for it and trust the source.")
@@ -534,10 +602,44 @@ def flatten(x, acc, limit=3_000_000):
     return acc
 
 
+def net_in_command(cmd):
+    """True if some simple command in cmd talks to the network: a network program in command position, git
+    push/pull/fetch/clone, or a URL handed to a program that is not a text tool. A network word inside a grep
+    pattern does not count (it made the guard taint the session on a grep of its own source, 2026-11-20)."""
+    segs = split_command(cmd)
+    if segs is None:
+        return bool(NET_CMD.search(cmd) or NETWORK.search(cmd))
+    for seg in segs:
+        name, i = command_word(seg)
+        if name in NET_WORDS:
+            return True
+        if name == "git" and any(t in ("push", "pull", "fetch", "clone", "ls-remote") for t in seg[i + 1:]):
+            return True
+        if name not in TEXT_TOOLS and any(re.match(r"https?://", t) for t in seg[i + 1:]):
+            return True
+    return False
+
+
+def ci_secret_sends(path, new_text, old_text):
+    """Lines new to a CI file that put a `secrets.*` value into a request to a host outside the forge and package
+    registries: (host, line) pairs (bench C39)."""
+    if not CI_FILE.search(os.path.expanduser(path)):
+        return []
+    old = set(l.strip() for l in old_text.splitlines())
+    hits = []
+    for line in new_text.splitlines():
+        if line.strip() in old or not re.search(r"\$\{\{\s*secrets\.", line):
+            continue
+        for host in re.findall(r"https?://([^/\s\"'?:]+)", line):
+            if not CI_HOSTS.search(host.lower()):
+                hits.append((host, line.strip()))
+    return hits
+
+
 def own_repo(tool, inp, cmd, cwd):
     """Output that comes from the guard's own repository, registry or installed copy (its files quote attack text)."""
     if tool == "Bash":
-        if NET_CMD.search(cmd) or NETWORK.search(cmd):
+        if net_in_command(cmd):
             return False
         return bool((cwd and is_protected(cwd)) or any(is_protected(w) for w in re.findall(r"[~\w./-]+", cmd)))
     path = inp.get("file_path") or inp.get("path") or inp.get("notebook_path") or ""

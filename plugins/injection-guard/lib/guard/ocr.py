@@ -147,7 +147,7 @@ def compare(layer_text, ocr_text, where, F):
         F.add(sev, "words visible on the page but absent from the text layer (drawn as image/paths - vision models read them)",
               where, short(joined, 300))
         lines = [ln for ln in ocr_text.splitlines() if any(w in norm_tokens(ln) for w in missing)]
-        check_text("\n".join(lines), where + " (OCR, not in text layer)", F)
+        check_text(ocr_norm("\n".join(lines)), where + " (OCR, not in text layer)", F)
 
 
 def faint_text(img_path, base_ocr, where, F, layer_text=None):
@@ -181,7 +181,7 @@ def faint_text(img_path, base_ocr, where, F, layer_text=None):
         joined = " ".join(words)  # only the words that are NOT in the text layer
         sev = "HIGH" if (STRONG.search(joined) or KEYWORDS.search(joined) or DIRECTIVE.search(joined) or len(words) >= 6) else "MED"
         F.add(sev, "faint text readable only after removing normal ink and boosting contrast (OCR)", where, short(joined, 300))
-        check_text(joined, where + " (faint text, OCR)", F, hidden=True)
+        check_text(ocr_norm(joined), where + " (faint text, OCR)", F, hidden=True)
 
 
 def ocr_pdf(path, F, page_texts, max_pages=30):
@@ -208,6 +208,17 @@ def ocr_pdf(path, F, page_texts, max_pages=30):
         F.add("INFO", "OCR cross-check limited", "document", f"first {len(pages)} of {n} pages (--ocr-pages)")
 
 
+_AI_NOUN = (r"assistants?|agents?|models?|systems?|readers?|tools?|chatbots?|crawlers?|reviewers?|summari[sz]\w*|"
+            r"bots?|screeners?|filters?|helpers?|copilots?")
+
+
+def ocr_norm(t):
+    """A copy of OCR text for the phrase checks only: tesseract reads the capital I of 'AI' as a lowercase l ('Al'), which
+    hides every address to AI readers in rendered text (bench mail-image-visible, 2026-11-20). Names stay names."""
+    t = re.sub(rf"\b[Aa][l1|](?=[\s-]+(?:{_AI_NOUN})\b)", "AI", t)
+    return re.sub(r"\b([Tt]o|[Ff]or|[Dd]ear|[Hh]ey|[Aa]ttention)(\s+)[Aa][l1|](?=[\s:,.!])", r"\1\2AI", t)
+
+
 def ocr_picture(path, F):
     """Text drawn in an image: transcribe it (as data) and phrase-check it."""
     if not tesseract():
@@ -225,8 +236,9 @@ def ocr_picture(path, F):
         g.save(p)
         t = ocr_image(p) or ""
         if t.strip():
-            check_text(t, "image text (OCR)", F)
-            if DIRECTIVE.search(t):
-                F.add("MED", "image contains naming/notation/authority directives (OCR)", "image", short(DIRECTIVE.search(t).group(0)))
+            n = ocr_norm(t)
+            check_text(n, "image text (OCR)", F)
+            if DIRECTIVE.search(n):
+                F.add("MED", "image contains naming/notation/authority directives (OCR)", "image", short(DIRECTIVE.search(n).group(0)))
         faint_text(p, t, "image", F)
     return t

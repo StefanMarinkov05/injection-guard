@@ -17,7 +17,7 @@ Prompt-injection defence for Claude Code, active in every project (user-scope pl
 Every scan is recorded in `~/.cache/injection-guard/scanned/<sha256>.json`. Trust is bound to the exact bytes: changing one byte (or swapping the file with one of the same name, size and time) re-opens the gate.
 
 ## Formats
-PDF, DOCX/PPTX/XLSX/ODF/EPUB, HTML/XHTML/SVG, Markdown/text/JSON/code, LaTeX/BibTeX (`.tex .sty .cls .bib`, with compile-time shell-escape detection), images (PNG/JPEG/GIF/WebP/TIFF), archives (zip, tar, tar.gz/bz2/xz, gz/bz2/xz; 7z/rar flagged), macOS metadata, unknown binaries (strings).
+PDF, DOCX/PPTX/XLSX/ODF/EPUB, HTML/XHTML/SVG, email (`.eml` and MIME text: every header, body part and attachment, attachments scanned as files, nested up to depth 3), Markdown/text/JSON/code, LaTeX/BibTeX (`.tex .sty .cls .bib`, with compile-time shell-escape detection), images (PNG/JPEG/GIF/WebP/TIFF), archives (zip, tar, tar.gz/bz2/xz, gz/bz2/xz; 7z/rar flagged), macOS metadata, unknown binaries (strings).
 
 Useful options: `--images DIR` (page PNGs), `--ocr-pages N` (default 15, 0 = off), `--reference KNOWN_GOOD.pdf` (structural diff, e.g. against last week's sheet), `--out FILE`, `--json`.
 
@@ -29,6 +29,7 @@ Useful options: `--images DIR` (page PNGs), `--ocr-pages N` (default 15, 0 = off
 - `mode`: `strict` (block), `warn` (only warnings), `off`. Environment override for one session: `INJECTION_GUARD_MODE=warn claude`.
 - `block_on`: `MED` (default, recall first) or `HIGH`.
 - `trusted_paths`: folders whose documents skip the read gate (output warnings still apply). Only add folders whose files you produce yourself.
+- `dev_unlock_until`: a time (epoch seconds, at most 24 h ahead) until which edits to this repository do not ask. Meant for working on the guard itself. It never covers the config or the cache, and while the session is tainted it does not cover `hooks/` or `.claude-plugin/`.
 
 ## Severity
 HIGH = hidden or encoded content aimed at an AI, or a structural trick that only makes sense for hiding. MED = something a reader could see differently from a human (hidden text without AI words, off-page text, faint ink, polyglot signs, live scripts, failed scan steps). INFO = normal but worth knowing. **Design choice: false positives over misses.** An unreadable file is never clean.
@@ -40,6 +41,9 @@ When a new technique appears: add a fixture or a builder-based test first (it sh
 
 ## Extra tools (user space, no sudo)
 `tesseract` (OCR, eng+deu), `mutool` (MuPDF), `qpdf`, venv with `pypdf` + `fontTools` in `~/.local/opt/`. Without them the OCR and reader-comparison checks are skipped (INFO note) and every ActualText counts as suspicious; with them installed everything runs automatically.
+
+## Gates that run in every session (1.8.0)
+Running a local script whose content pipes a download into a shell asks (the script is opened first). A Write or Edit of a CI pipeline file that adds a `secrets.*` value to a request to a host outside the forge and package registries asks. Inline interpreter writes (`python -c`, heredocs, `perl -i`) to the guard's own files ask like `sed -i` does.
 
 ## Known limits
 OCR (tesseract) is noisy on mathematics and runs on the first 30 pages by default (`--ocr-pages`). A visible, plausible decoy cannot be told from a real task. JavaScript- or server-generated content is flagged, not executed. Phrase lists miss novel wording; the structural, Unicode, encoding and ambiguity checks do not depend on wording. The hooks cannot rewrite built-in tool output, so they block and redirect instead.
