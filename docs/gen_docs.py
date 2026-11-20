@@ -285,6 +285,10 @@ M = [
  ("T21", "text", "Misspelled and chat-spelled orders", "agnet, ignroe, recomend, ur, pls dont, instrucshuns",
   "the order is misspelled so literal patterns miss it", "one-edit repair over a larger trigger vocabulary, chat spelling and sound-alike endings", "HIGH",
   ["test_agent_vectors.Misspelled.*"]),
+ ("T22", "text", "Corrections that replace a critical value", "all extracted text, hidden or visible",
+  "a visible, unsigned erratum replaces a release checksum (bench D-022: 9 of 9 5.5 agents accepted a tampered archive); a changed-bank-details notice",
+  "a correction cue within 300 characters of a checksum, IBAN, account or key is MED when visible, HIGH when hidden; plain release notes, invoices and changelogs stay clean", "MED/HIGH",
+  ["test_redefinition.Redefinition.*"]),
  ("D5", "office", "Spreadsheet formulas and file names", "CSV with =HYPERLINK/WEBSERVICE/cmd|; invoice.pdf.exe; a file named as an order",
   "opening the file fetches a URL or starts a program; a program looks like a document; the agent reads the name in ls, find or unzip -l",
   "formula and double-extension patterns; names split at _ - . and CamelCase and checked like sentences", "HIGH/MED",
@@ -323,7 +327,15 @@ M = [
   "content read in a session edits the guard (directly, through sed/tee, or through inline python/perl/node code)",
   "edits ask; a time-limited unlock (at most 24 h) covers the repository but never the config or cache, and not hooks/ or .claude-plugin/ "
   "while the session is tainted; network words inside a grep pattern do not cancel the own-repository exemption", "ask",
-  ["test_hooks2.DevUnlock.*", "test_hooks3.InterpreterWrites.*", "test_hooks3.OwnRepo.*"]),
+  ["test_hooks2.DevUnlock.*", "test_hooks3.InterpreterWrites.*", "test_hooks3.OwnRepo.*", "test_hooks4.SelfProtectionWriters.*"]),
+ ("H19", "hook", "Agent configuration written from the shell", "Bash writes to Claude Code settings, hooks, agents, CLAUDE.md and other files later sessions load",
+  "after a finding, an echo/printf/cp/tee into ~/.claude/settings.json or ~/.claude/hooks/ (cross-model review, 2026-11-20)",
+  "a shell write to Claude Code settings asks in every session; a shell write to any agent configuration file asks after a finding; reading them passes", "ask",
+  ["test_hooks4.AgentConfigByShell.*"]),
+ ("H20", "hook", "Network calls from inline interpreter code", "Bash running python -c, heredocs, node -e, perl, ruby, php",
+  "after a finding, urllib/requests/http.client/sockets/fetch send data while curl -d would have asked (cross-model review)",
+  "inline code that talks to the network is a risky action after a finding, like curl; ordinary python passes", "ask",
+  ["test_hooks4.InterpreterNetwork.*"]),
 ]
 
 # red-team log: (round, attack, result before the fix, fix)
