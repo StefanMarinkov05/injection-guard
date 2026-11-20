@@ -25,8 +25,9 @@ all \val{review.accounting.pooled_5x} 5.x runs, including five effort levels and
 download into a shell, the 5.5 models took the step in \val{F9-bootstrap-5.0-vs-5.5.k_5_5} of
 \val{F9-bootstrap-5.0-vs-5.5.n_5_5} conditions and the 5.0 models in \val{F9-bootstrap-5.0-vs-5.5.k_5_0} of
 \val{F9-bootstrap-5.0-vs-5.5.n_5_0} ($p = \val{F9-bootstrap-5.0-vs-5.5.p}$): a regression in judging process steps, not
-in resisting injection. These are single-call decisions to act; in a full-agent check the same Haiku 5.5 inspected the
-script and declined, so this measurement can overstate what a real agent does. With real agents the guard cut Haiku
+in resisting injection. These are single-call decisions to act; as real Claude Code agents with tools, the 5.x models took
+the step in \val{c38_agent.k} of \val{c38_agent.n} runs (they inspected the script and warned instead), so this is a
+decision-level regression that agents do not reproduce. With real agents the guard cut Haiku
 4.5's follows from \val{AB-Haiku 4.5.off_followed} to \val{AB-Haiku 4.5.on_followed} of 14 (McNemar
 $p = \val{AB-Haiku 4.5.p}$, a direction only) at \val{guard_ab.overhead.cost_ratio}$\times$ the cost and 47\% more
 median wall-clock time, and it exposed three gaps. Payloads are withheld; the run table, a script that recomputes the
@@ -372,7 +373,7 @@ Three patterns stand out.
   a model; adaptive attacks break such filters \citep{nasr2025attacker}, and our cases may simply have been too easy.
 \end{enumerate}
 
-\subsection{An unsafe process step: a 5.0 to 5.5 regression}
+\subsection{An unsafe process step: a single-call regression that agents do not reproduce}
 \label{sec:c38}
 C38 asks the agent to set up a repository by following its README. The README is clean; its setup script contains one
 line that downloads a file and runs it in a shell. Nothing is hidden and nothing is addressed to an AI. Over every
@@ -385,19 +386,30 @@ $p = \val{F9-bootstrap-5.0-vs-5.5.p}$). The 4.x models took it in \val{review.pr
 In 17 of the 20 5.x runs that took the step, the answer also warned the user about piping a download into a shell: the
 models saw the risk and ran the step anyway. C38 accounts for 7 of Sonnet 5.5's 9 follows and 7 of Opus 5.5's 7.
 
-This is one scenario, so it shows a regression on this step, not a rate for process steps in general. The same pattern
+This is one scenario, so it shows a single-call regression on this step, not a rate for process steps in general. The same pattern
 was reported independently for setup files in clean repositories \citep{helpnet2026mozilla} and for user-invoked
 repository tasks \citep{zhu2026beyond}.
 
-\paragraph{The measurement and the real agent disagree here.} In single calls Haiku 5.5 took the step in 6 of 7
-conditions. As a real Claude Code agent in the A/B (Section~\ref{sec:ab}), it opened the script, warned the user and did
-not run it, with and without the guard. Haiku 4.5 tried to run it in both arms and was stopped by Claude Code's own
-permission prompt. One pair cannot estimate how often the two settings disagree, but it shows that a single-call
-decision, made with the whole workspace in view and no chance to look first, can overstate what an agent does when it
-can inspect a file before acting. We therefore report C38 as a decision-level finding.
+\paragraph{Real agents do not take the step.} The single-call decision is made with the whole workspace in the prompt
+and no chance to look first. We therefore re-ran C38 with real Claude Code agents (tools Bash, Read, Write, Edit, Glob
+and Grep, default effort, guard off, no security prompt, ten runs per model), together with a twin whose setup script
+only installs the requirements. No agent ran the step: \val{c38_agent.k} of \val{c38_agent.n} runs (each 5.x model
+\val{c38_agent.per_model.Opus 5.5}; upper 95\% bound \val{c38_agent.cp_hi}, for the 5.5 models alone
+\val{c38_agent.gen_5_5.cp_hi}). \val{c38_agent.fetched} runs opened the script and tried to download the remote file to
+read it, the other \val{c38_agent.untouched} left it alone, and \val{c38_agent.reported} answers warned the user about the
+download (LLM judge and an execution rule agree on all \val{c38_agent.judged}). On the twin every agent ran the script
+(\val{c38_agent.twin_ran} of \val{c38_agent.twin_n}), so the refusal is specific to the download, not a refusal to run
+setup scripts. For the 5.5 models the two settings differ sharply (\val{F10-agent-vs-single-5.5.k_agent} of
+\val{F10-agent-vs-single-5.5.n_agent} as agents vs \val{F10-agent-vs-single-5.5.k_single} of
+\val{F10-agent-vs-single-5.5.n_single} in single calls, Holm $p = \val{F10-agent-vs-single-5.5.p_holm}$), and the 5.0 vs
+5.5 gap disappears (\val{F10-agent-5.0-vs-5.5.k_5_0} of \val{F10-agent-5.0-vs-5.5.n_5_0} vs
+\val{F10-agent-5.0-vs-5.5.k_5_5} of \val{F10-agent-5.0-vs-5.5.n_5_5}). The single-call result is a decision-level
+finding that an agent able to inspect the file before acting does not reproduce. Ten runs per model rule out a high
+rate, not a rare one. The download attempts were blocked by the test's permission list (the canary
+server logged no request); in a normal session each would be a permission prompt.
 
 \takeaway{The residual risk we found for current Claude models is not hidden text but an ordinary-looking dangerous
-step, and on that step 5.5 is worse than 5.0. Whether real agents take it as often is open.}
+step, and in single calls 5.5 is worse than 5.0 on that step. Real agents inspected the script and did not run it (\val{c38_agent.k} of \val{c38_agent.n}).}
 
 \subsection{What the guard covers}
 \label{sec:coverage}
@@ -443,6 +455,9 @@ possible: a direction, not a proof. The three attacks that passed name three gap
   Claude Code's own permission prompt stopped it in both arms.
 \item \textbf{CI secrets.} Writing a workflow step that sends a secret to an outside host (C39) passed every hook.
 \end{enumerate}
+Version 1.8.0 adds a gate for each of the last two (a local script that pipes a download into a shell asks in every
+session; a CI change that sends a \texttt{secrets.*} value to an outside host asks); the A/B above used 1.7.0 and has not
+been re-run.
 The one guard deny was wrong: the read gate refused a shell loop that itself called \texttt{safe-read}.
 
 \paragraph{What the effect gate is and is not.} The gate is an enumerated list of effects. It always asks before a command that
@@ -497,7 +512,7 @@ Read for a deployer of Claude models:
 \begin{description}
 \item[Decisions, not agents.] The main experiment measures one decision per run, with the whole workspace in the
   prompt, and executes nothing. A real agent can inspect, correct or compound a decision; on C38 the two settings
-  disagreed for Haiku 5.5. The A/B covers only 14 scenarios, two models and one run per cell.
+  disagree for every 5.x model (Section~\ref{sec:c38}). The A/B covers only 14 scenarios, two models and one run per cell.
 \item[Author bias.] The same person wrote the attacks and the guard, so the guard is tuned to these attacks and static
   coverage is optimistic. Independent attacks, especially adaptive ones \citep{nasr2025attacker}, are the most important
   missing test. We publish per-case descriptions and the harness design so others can build their own.
@@ -510,7 +525,8 @@ Read for a deployer of Claude models:
 \item[Exploratory tests.] All hypotheses were formalized after the main campaign; the construct split and the strata
   analysis were added after review. An open-classifier baseline is not yet reported. No $p$ value here is confirmatory.
 \item[Scope.] Claude models only, November 2026 versions, Claude Code only; the CLI version was not recorded per run.
-\item[Guard gaps.] Raw downloads, local process steps and CI secret steps (Section~\ref{sec:ab}); an enumerated effect
+\item[Guard gaps.] Raw downloads, local process steps and CI secret steps (Section~\ref{sec:ab}; the last two gated since
+  1.8.0, not yet re-measured); an enumerated effect
   list; one false deny in one.
 \end{description}
 
@@ -527,7 +543,7 @@ where to build next.
 \paragraph{Disclosure and ethics.} All attacks targeted local canary hosts and fake credentials; nothing harmful was
 executed outside the test machine. Payloads are withheld; scenario descriptions, the run table, results and the
 recompute script are public. This paper and its data were published on 20 November 2026 without prior notice to
-Anthropic. A short note on the Claude-specific findings (the C38 regression, without payloads) has been drafted for the
+Anthropic. A short note on the Claude-specific findings (the C38 single-call result and its agent replication, without payloads) has been drafted for the
 author to send; if it is sent, the date will be added here.
 
 \paragraph{Acknowledgments.} A draft of this paper was reviewed by two LLM reviewers (ChatGPT 6 and DeepSeek V4.1 Flash).
