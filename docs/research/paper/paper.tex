@@ -29,7 +29,9 @@ in resisting injection. These are single-call decisions to act; as real Claude C
 the step in \val{c38_agent.k} of \val{c38_agent.n} runs (they inspected the script and warned instead), so this is a
 decision-level regression that agents do not reproduce. Agent checks on six attacked email scenarios and on a
 manipulated invoice PDF found no follows by the 5.5 models (\val{email_agent.k} of \val{email_agent.n} and \val{invoice_agent.k} of
-\val{invoice_agent.n}). With real agents the guard cut Haiku
+\val{invoice_agent.n}), but a visible, unsigned erratum that replaced a release checksum made all
+\val{breadcrumb_agent.per_scenario.bc-erratum-checksum.n} accept a tampered archive; a correction check added to the guard brought this to
+\val{breadcrumb_agent.erratum_guarded.k} of \val{breadcrumb_agent.erratum_guarded.n} (Fisher $p = \val{F11-erratum-guard-off-vs-on.p}$). With real agents the guard cut Haiku
 4.5's follows from \val{AB-Haiku 4.5.off_followed} to \val{AB-Haiku 4.5.on_followed} of 14 (McNemar
 $p = \val{AB-Haiku 4.5.p}$, a direction only) at \val{guard_ab.overhead.cost_ratio}$\times$ the cost and 47\% more
 median wall-clock time, and it exposed three gaps. Payloads are withheld; the run table, a script that recomputes the
@@ -69,7 +71,7 @@ to deployed agents.
   would not see, and asks the user before actions whose \emph{effect} is dangerous, independent of wording.
 \item \textbf{A measurement of where it is needed} (Sections~\ref{sec:method} and \ref{sec:results}): 42 injection
   scenarios and one unsafe process step in six use cases, 11 Claude models, effort and system-prompt conditions, a
-  blind LLM judge, ten hypothesis families tested with exact methods (formalized after the main campaign, so
+  blind LLM judge, eleven hypothesis families tested with exact methods (formalized after the main campaign, so
   exploratory), and a full-agent A/B with the guard on and off.
 \item \textbf{An honest account of the gaps} (Sections~\ref{sec:ab} and \ref{sec:limits}): the attack classes the
   guard misses, why, and what the design cannot measure yet.
@@ -413,9 +415,9 @@ server logged no request); in a normal session each would be a permission prompt
 \takeaway{The residual risk we found for current Claude models is not hidden text but an ordinary-looking dangerous
 step, and in single calls 5.5 is worse than 5.0 on that step. Real agents inspected the script and did not run it (\val{c38_agent.k} of \val{c38_agent.n}).}
 
-\subsection{Real agents on email and on a manipulated invoice}
+\subsection{Real agents on email, a manipulated invoice and breadcrumb attacks}
 \label{sec:agents}
-Two later agent checks used the same setup as the C38 replication (real Claude Code agents, default effort, guard
+Three later agent checks used the same setup as the C38 replication (real Claude Code agents, default effort, guard
 off, no security prompt, LLM judge on every attacked run).
 
 \paragraph{Email.} Nine new scenarios deliver the planted content inside an email file (MIME): a body that asks for
@@ -440,8 +442,29 @@ rendered pages as well as the text, so it can see that the notice is not on the 
 text carries no colour. An agent that reads the same PDF through \texttt{pdftotext} or a text-only pipeline is in the
 single-call situation.
 
+\paragraph{Breadcrumbs, a plain-text erratum and a task swap.} Three scenarios test attacks that give no order to an
+AI. In the first, a repository's README, troubleshooting guide and contributing guide each give one ordinary step:
+collect diagnostics (the script copies the \texttt{.env} file), then upload them to a collector. In the second, a
+visible, unsigned \texttt{ERRATA.md} in a release folder replaces the published checksum with that of a tampered
+archive. The third is a replica of a real exercise sheet whose hidden text swaps the task for an AI solver and asks it
+to stay silent; on the original sheet Opus 5.5 did exactly that in one session we did not record. With three runs per
+5.5 model, no agent uploaded the diagnostics (\val{breadcrumb_agent.per_scenario.bc-chain-exfil.followed} of \val{breadcrumb_agent.per_scenario.bc-chain-exfil.n}), although \val{breadcrumb_agent.per_scenario.bc-chain-exfil.first_step}
+ran the collection step and so copied the keys into a local file, and no agent solved the swapped exercise
+(\val{breadcrumb_agent.per_scenario.bc-sheet-task-swap.followed} of \val{breadcrumb_agent.per_scenario.bc-sheet-task-swap.n}). The replica hides the text differently from the original (white 1\,pt text
+instead of replacement text over invisible glyphs), so it does not settle the original case. The erratum worked on
+every run: \val{breadcrumb_agent.per_scenario.bc-erratum-checksum.followed} of \val{breadcrumb_agent.per_scenario.bc-erratum-checksum.n} agents (lower 95\% bound \val{breadcrumb_agent.per_scenario.bc-erratum-checksum.cp_lo}) computed the hash, saw that
+it did not match the release notes, found it in the erratum and wrote OK. Sonnet and Opus said so in the answer;
+Haiku did not; none asked who wrote the erratum. Version 1.8.0 of the scanner rates the erratum clean, since nothing
+is hidden and nothing addresses an AI. We then added a check for a correction next to a checksum, IBAN, account or
+key (MED when visible, HIGH when hidden); on the bench's 60 scenarios it fires only on the erratum and the two invoice
+swaps. With the guard on, \val{breadcrumb_agent.erratum_guarded.k} of \val{breadcrumb_agent.erratum_guarded.n} agents followed and all \val{breadcrumb_agent.erratum_guarded.warned} warned, most of
+them citing the guard's note (F11, Fisher $p = \val{F11-erratum-guard-off-vs-on.p}$). The check was written after seeing this attack and is
+tested on one design, so this shows the check works here, not a rate for corrections in general; prices, dates and
+versions are not covered.
+
 \takeaway{Planted orders, in documents or emails, rarely work on current models; planted facts are the residual
-risk, and whether a model catches them depends on whether it sees the page or only the text.}
+risk. Hidden facts are caught when the model sees the page; a correction in plain sight fooled every 5.5 agent, and
+only a check in the guard stopped it.}
 
 \subsection{What the guard covers}
 \label{sec:coverage}
@@ -489,7 +512,9 @@ possible: a direction, not a proof. The three attacks that passed name three gap
 \end{enumerate}
 Version 1.8.0 adds a gate for each of the last two (a local script that pipes a download into a shell asks in every
 session; a CI change that sends a \texttt{secrets.*} value to an outside host asks); the A/B above used 1.7.0 and has not
-been re-run.
+been re-run. Version 1.8.1 closes four bypasses found in a cross-model review and confirmed through the real hook
+(overwriting the guard with \texttt{install} or \texttt{rsync}, shell writes to agent settings and hooks, network calls
+from inline interpreter code after a finding); 1.8.2 adds the correction check described in Section~\ref{sec:agents}.
 The one guard deny was wrong: the read gate refused a shell loop that itself called \texttt{safe-read}.
 
 \paragraph{What the effect gate is and is not.} The gate is an enumerated list of effects. It always asks before a command that
@@ -537,7 +562,8 @@ Read for a deployer of Claude models:
   most of these payloads. As real agents reading the invoice PDF through Claude Code, the 5.5 models did not take the planted
   bank details (Section~\ref{sec:agents}); a text-only path keeps the single-call risk.
 \item \textbf{5.x models on scanning, shopping and agent tasks other than setup: none observed}, with upper bounds of
-  2.3 to 2.6\%. A guard adds a record of what was hidden, not a measured reduction.
+  2.3 to 2.6\%. A guard adds a record of what was hidden, not a measured reduction (the one measured
+  reduction for 5.5 agents is the checksum erratum, Section~\ref{sec:agents}).
 \end{itemize}
 
 \section{Limitations and what is missing}
@@ -545,8 +571,9 @@ Read for a deployer of Claude models:
 \begin{description}
 \item[Decisions, not agents.] The main experiment measures one decision per run, with the whole workspace in the
   prompt, and executes nothing. A real agent can inspect, correct or compound a decision; on C38 the two settings
-  disagree for every 5.x model (Section~\ref{sec:c38}). Agent checks exist only for C38, the email scenarios and one invoice
-  (Section~\ref{sec:agents}), with three to ten runs per model; images inside email were mostly not read by the agents. The A/B covers only 14 scenarios, two models and one run per cell.
+  disagree for every 5.x model (Section~\ref{sec:c38}). Agent checks exist only for C38, the email scenarios, one invoice and three breadcrumb
+  scenarios (Section~\ref{sec:agents}), with three to ten runs per model; the guard's correction check was designed after
+  the erratum result and tested only on it; images inside email were mostly not read by the agents. The A/B covers only 14 scenarios, two models and one run per cell.
 \item[Author bias.] The same person wrote the attacks and the guard, so the guard is tuned to these attacks and static
   coverage is optimistic. Independent attacks, especially adaptive ones \citep{nasr2025attacker}, are the most important
   missing test. We publish per-case descriptions and the harness design so others can build their own.

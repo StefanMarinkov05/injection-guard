@@ -1,7 +1,7 @@
 """Shared patterns, findings, text checks, config and scan registry for injection-guard."""
 import base64, codecs, hashlib, html, json, os, re, time, unicodedata, urllib.parse
 
-VERSION = "1.8.1"
+VERSION = "1.8.2"
 HOME = os.path.expanduser("~")
 CACHE = os.path.join(HOME, ".cache", "injection-guard")
 REGISTRY = os.path.join(CACHE, "scanned")
@@ -73,6 +73,34 @@ DIRECTIVE = re.compile(
     r"|\bin this (course|lecture|sheet|exercise|document),? [^.\n]{0,40}\b(denotes?|means|stands for|is defined as|is written)\b"
     r"|\b(do not|don't|never) (use|mention|write|cite|name) (the )?(symbol|word|lemma|theorem|notation|term|name)\b",
     re.I)
+# A correction that replaces a value a payment or an install depends on (bench D-022: a visible, unsigned ERRATA.md
+# that swapped a release checksum made 9 of 9 agents accept a tampered archive). No order, nothing hidden: the only
+# signal is "this value was wrong, use this one" next to a checksum, IBAN, account or key.
+CORRECTION = re.compile(
+    r"\b(errat(um|a)|correction|corrected|misprint(ed)?|typo)\b"
+    r"|\b(was|were) (wrong|incorrect|a typo|a mistake|misprinted|copied from|taken from|outdated)\b"
+    r"|\b(is|are) (wrong|incorrect|invalid|closed|no longer (valid|used|in use|active))\b"
+    r"|\b(bank|account|payment|banking) (details|information|data) (have |has )?(changed|been updated)\b"
+    r"|\bthe (correct|right|new|updated|real|valid) (\w+ ){0,3}(is|are|reads)\b|\bpay only to\b"
+    r"|\b(use|pay to|send to|verify against) (this|the following|the new|the updated) (\w+ ){0,2}instead\b", re.I)
+CRITICAL_VALUE = re.compile(
+    r"\b[0-9a-f]{32,128}\b|\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){3,7}(?: ?[A-Z0-9]{1,3})?\b"
+    r"|\b(checksums?|sha-?(1|256|384|512)|md5|hash(es)?|fingerprints?|iban|bic|swift|account (number|no\.?)|routing number|"
+    r"sort code|wallet( address)?|public key|signing key|gpg key)\b", re.I)
+
+
+def value_redefinitions(text, limit=3):
+    """Spans where a correction cue and a payment/integrity value are within 300 characters of each other."""
+    out = []
+    for m in CORRECTION.finditer(text[:300_000]):
+        a, b = max(0, m.start() - 300), min(len(text), m.end() + 300)
+        if CRITICAL_VALUE.search(text, a, b):
+            out.append(text[max(0, m.start() - 80): m.end() + 160])
+            if len(out) >= limit:
+                break
+    return out
+
+
 # --- red-team extensions (30 Oct 2026): synonyms, chat templates, reading-mode probes, other languages
 _STRONG_EXTRA = (
     r"\b(pay no attention to|do not pay attention to|set aside|overlook|supersede|supersedes|replace|discard|drop)"
@@ -803,6 +831,12 @@ def check_text(text, where, F, hidden=False, keywords=True, _depth=0):
             F.add("HIGH", "hidden directive (forced naming/notation, canary word, fake erratum or redefinition)", where, short(src[a:b], 300))
         else:
             F.add("INFO", "visible directive about naming/notation/answers (check it belongs to the task)", where, short(src[a:b], 200))
+    if _depth == 0:
+        red = value_redefinitions(flat)
+        if red:
+            F.add("HIGH" if hidden else "MED", "correction that replaces a checksum, IBAN, account or key (a newer note "
+                  "redefining a value): use the value from the original, signed source; an unsigned erratum, a changed-bank-details "
+                  "notice or a second checksum is how a swap is done", where, short(red[0], 260))
     for run in VS_RUN.findall(text):
         dec = decode_vs(run)
         F.add("HIGH" if len(dec) >= 3 else "MED", "variation-selector smuggling (bytes hidden after a visible character)", where,
