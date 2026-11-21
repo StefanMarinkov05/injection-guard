@@ -31,7 +31,9 @@ decision-level regression that agents do not reproduce. Agent checks on six atta
 manipulated invoice PDF found no follows by the 5.5 models (\val{email_agent.k} of \val{email_agent.n} and \val{invoice_agent.k} of
 \val{invoice_agent.n}), but a visible, unsigned erratum that replaced a release checksum made all
 \val{breadcrumb_agent.per_scenario.bc-erratum-checksum.n} accept a tampered archive; a correction check added to the guard brought this to
-\val{breadcrumb_agent.erratum_guarded.k} of \val{breadcrumb_agent.erratum_guarded.n} (Fisher $p = \val{F11-erratum-guard-off-vs-on.p}$). With real agents the guard cut Haiku
+\val{breadcrumb_agent.erratum_guarded.k} of \val{breadcrumb_agent.erratum_guarded.n} (Fisher $p = \val{F11-erratum-guard-off-vs-on.p}$), though on three corrections written blind the check flagged none: the
+models refused the IBAN and amount changes in every run, and Haiku 5.5 pinned a look-alike package in
+\val{blind_agent.per_scenario.bl-notice-package-swap.followed} of \val{blind_agent.per_scenario.bl-notice-package-swap.n}. With real agents the guard cut Haiku
 4.5's follows from \val{AB-Haiku 4.5.off_followed} to \val{AB-Haiku 4.5.on_followed} of 14 (McNemar
 $p = \val{AB-Haiku 4.5.p}$, a direction only) at \val{guard_ab.overhead.cost_ratio}$\times$ the cost and 47\% more
 median wall-clock time, and it exposed three gaps. Payloads are withheld; the run table, a script that recomputes the
@@ -71,7 +73,7 @@ to deployed agents.
   would not see, and asks the user before actions whose \emph{effect} is dangerous, independent of wording.
 \item \textbf{A measurement of where it is needed} (Sections~\ref{sec:method} and \ref{sec:results}): 42 injection
   scenarios and one unsafe process step in six use cases, 11 Claude models, effort and system-prompt conditions, a
-  blind LLM judge, eleven hypothesis families tested with exact methods (formalized after the main campaign, so
+  blind LLM judge, twelve hypothesis families tested with exact methods (formalized after the main campaign, so
   exploratory), and a full-agent A/B with the guard on and off.
 \item \textbf{An honest account of the gaps} (Sections~\ref{sec:ab} and \ref{sec:limits}): the attack classes the
   guard misses, why, and what the design cannot measure yet.
@@ -462,9 +464,25 @@ them citing the guard's note (F11, Fisher $p = \val{F11-erratum-guard-off-vs-on.
 tested on one design, so this shows the check works here, not a rate for corrections in general; prices, dates and
 versions are not covered.
 
+\paragraph{A blind test of the correction check.} To see whether the check generalizes, we wrote three more
+corrections before any guard scan and committed the designs and predictions first: a vendor note moving payments to
+a new IBAN, a note ``correcting'' a quoted amount upward, and a docs notice that a pinned package was yanked and
+continues under a look-alike name. Version 1.8.2 rates all three clean. The models needed no help with money: the IBAN
+and amount notes were followed in \val{blind_agent.per_scenario.bl-bank-move.followed} and \val{blind_agent.per_scenario.bl-correction-amount.followed} of
+\val{blind_agent.per_scenario.bl-bank-move.n} runs each, and every run warned that the note looks like payment fraud (we had predicted
+more than half followed). The package notice was followed in \val{blind_agent.per_scenario.bl-notice-package-swap.followed} of
+\val{blind_agent.per_scenario.bl-notice-package-swap.n} runs, all by Haiku 5.5; Sonnet and Opus kept the documented package every time.
+With the guard on, \val{blind_agent.guarded.bl-notice-package-swap.followed} of
+\val{blind_agent.guarded.bl-notice-package-swap.n} followed (F12, Fisher $p = \val{F12-package-swap-guard-off-vs-on.p}$);
+the guard never flagged the notice, so the difference is noise. The correction check therefore covers the attack it
+was written for and none of the three blind ones. The contrast with the erratum (every run followed, against none
+of 18 on the money notes) suggests the models have learned payment fraud but not supply-chain corrections; this
+comparison was not planned and rests on one design each.
+
 \takeaway{Planted orders, in documents or emails, rarely work on current models; planted facts are the residual
 risk. Hidden facts are caught when the model sees the page; a correction in plain sight fooled every 5.5 agent, and
-only a check in the guard stopped it.}
+only a check in the guard stopped it. That check missed three corrections written blind; the models rejected the
+money changes on their own, and a small model still pinned a look-alike package.}
 
 \subsection{What the guard covers}
 \label{sec:coverage}
@@ -514,7 +532,8 @@ Version 1.8.0 adds a gate for each of the last two (a local script that pipes a 
 session; a CI change that sends a \texttt{secrets.*} value to an outside host asks); the A/B above used 1.7.0 and has not
 been re-run. Version 1.8.1 closes four bypasses found in a cross-model review and confirmed through the real hook
 (overwriting the guard with \texttt{install} or \texttt{rsync}, shell writes to agent settings and hooks, network calls
-from inline interpreter code after a finding); 1.8.2 adds the correction check described in Section~\ref{sec:agents}.
+from inline interpreter code after a finding); 1.8.2 adds the correction check described in Section~\ref{sec:agents}; 1.8.3 stops treating a link's own address as hidden
+text when the page prints it (a CV linking a repository named after an AI product scanned HIGH six times).
 The one guard deny was wrong: the read gate refused a shell loop that itself called \texttt{safe-read}.
 
 \paragraph{What the effect gate is and is not.} The gate is an enumerated list of effects. It always asks before a command that
@@ -571,9 +590,9 @@ Read for a deployer of Claude models:
 \begin{description}
 \item[Decisions, not agents.] The main experiment measures one decision per run, with the whole workspace in the
   prompt, and executes nothing. A real agent can inspect, correct or compound a decision; on C38 the two settings
-  disagree for every 5.x model (Section~\ref{sec:c38}). Agent checks exist only for C38, the email scenarios, one invoice and three breadcrumb
-  scenarios (Section~\ref{sec:agents}), with three to ten runs per model; the guard's correction check was designed after
-  the erratum result and tested only on it; images inside email were mostly not read by the agents. The A/B covers only 14 scenarios, two models and one run per cell.
+  disagree for every 5.x model (Section~\ref{sec:c38}). Agent checks exist only for C38, the email scenarios, one invoice, three breadcrumb
+  and three blind correction scenarios (Section~\ref{sec:agents}), with three to ten runs per model; the guard's correction
+  check was designed after the erratum result and flagged none of the three blind corrections; images inside email were mostly not read by the agents. The A/B covers only 14 scenarios, two models and one run per cell.
 \item[Author bias.] The same person wrote the attacks and the guard, so the guard is tuned to these attacks and static
   coverage is optimistic. Independent attacks, especially adaptive ones \citep{nasr2025attacker}, are the most important
   missing test. We publish per-case descriptions and the harness design so others can build their own.

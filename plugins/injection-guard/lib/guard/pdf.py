@@ -67,6 +67,12 @@ def pdf_string(tok):
     return b.decode("latin1")
 
 
+def _url_shown(st, flat):
+    """True when the string is only a link URL (optionally inside /URI (...)) and that address is printed on the page."""
+    m = re.fullmatch(r"\s*(?:/URI\s*\()?\s*(?:https?://)?(?:www\.)?([^\s()<>]+?)/?\s*\)?\s*(?:>>)?\s*", st)
+    return bool(m) and len(m.group(1)) >= 8 and m.group(1) in flat
+
+
 def structural(data, F, replacements, kw_strings):
     all_strings, actual = [], []
     for idx, b in enumerate(all_streams(data)):
@@ -154,7 +160,11 @@ def structural(data, F, replacements, kw_strings):
     # one regex pass over all string objects (thousands of separate searches are slow)
     # PDF names (/Name#20with#20spaces) and % comments: invisible to viewers, read by anything that dumps the file
     blank = re.sub(rb"(stream\r?\n).*?(endstream)", rb"\1\2", data[:60_000_000], flags=re.S)  # never compressed bytes
+    # a link's URL path (/URI (https://host/a/long-repo-name)) is not a PDF name; the URL itself is checked as a string
+    uri_spans = [u.span(1) for u in re.finditer(rb"/URI\s*\(((?:\\.|[^\\)])*)\)", blank)]
     for m in re.finditer(rb"/([^\s/\[\]<>(){}%]{20,})", blank):
+        if any(a0 <= m.start() < a1 for a0, a1 in uri_spans):
+            continue
         try:
             nm = re.sub(rb"#([0-9A-Fa-f]{2})", lambda x: bytes([int(x.group(1), 16)]), m.group(1)).decode("latin1")
         except Exception:
@@ -489,6 +499,8 @@ def scan_pdf(path, F, max_pages=None, image_dir=None, ocr_pages=30, reference=No
         F.add("MED", "page structure could not be read (damaged PDF?) - readers may repair it differently", "document", "")
     flat = "".join(visible.split())
     for st in dict.fromkeys(kw_strings):
+        if _url_shown(st, flat):
+            continue  # a link whose address is printed on the page (pages often print it without https://)
         if "".join(st.split()) not in flat:
             F.add("HIGH", "PDF string object with AI-directed words or directives (not part of the visible text)", "structure", short(st, 400))
             check_text(st, "PDF string object (not visible)", F, hidden=True)
